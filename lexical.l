@@ -8,6 +8,15 @@ void logErrorf(char* type, char* str){
     char* errorf="\033[31mError type %s\033[0m at Line %d: \033[31m%s\033[0m \'%s\'\n";
     printf(errorf, type, yylineno, str, yytext);
 }
+void setIntVal(){
+    yylval.type_unsigned=strtol(yytext,NULL,0);
+}
+void setFloatVal(){
+    yylval.type_float=strtof(yytext,NULL);
+}
+void setStrVal(){
+    strcpy(yylval.type_string,yytext);
+}
 typedef struct node{
     char* syntaxName;
     union {
@@ -16,15 +25,33 @@ typedef struct node{
     char            sval[64];
     };
     struct node *first_child,*next_sibling;
-}tree;
+}syntaxNode;
 
 #if DEBUGLEVEL
 #define TOKENTREE(t) logDebugf("t")
 #else
-#define TOKENTREE(t) \
- do{ \
-    tree *node = (tree *)malloc(sizeof(tree));\
- } while (0)
+#define TOKENTREE(t)                                                 \
+    do                                                               \
+    {                                                                \
+        syntaxNode *node = (syntaxNode *)malloc(sizeof(syntaxNode)); \
+        node->first_child = NULL;                                    \
+        node->next_sibling = NULL;                                   \
+        switch (t)                                                   \
+        {                                                            \
+        case INT:                                                    \
+            node->ival = yylval.type_unsigned;                       \
+            break;                                                   \
+        case FLOAT:                                                  \
+            node->fval = yylval.type_float;                          \
+            break;                                                   \
+        case ID:                                                     \
+        case TYPE:                                                   \
+            strcpy(node->sval, yylval.type_string);                  \
+            break;                                                   \
+        default:                                                     \
+            break; /* undefined value */                             \
+        }                                                            \
+    } while (0)
 #endif
 int yycolumn = 1;
 #define YY_USER_ACTION                                \
@@ -64,12 +91,12 @@ WHITESPACE [ \t\r\n]+
 COMMENTL "//"
 COMMENTB "/*"
 %%
-{FLOAT}      {TOKENTREE(FLOAT);return FLOAT;}
+{FLOAT}      {setFloatVal();TOKENTREE(FLOAT);return FLOAT;}
+{DEC}        {setIntVal();TOKENTREE(INT);return INT;}
+{OCT}        {setIntVal();TOKENTREE(INT);return INT;}
+{HEX}        {setIntVal();TOKENTREE(INT);return INT;}
 {FLOATERROR} {logErrorf("A","Illegal floating point number");return FLOAT;}
-{DEC}        {TOKENTREE(INT);return INT;}
-{OCT}        {TOKENTREE(INT);return INT;}
 {OCTERROR}   {logErrorf("A","Illegal octal number");return INT;}
-{HEX}        {TOKENTREE(INT);return INT;}
 {HEXERROR}   {logErrorf("A","Illegal hexadecimal number");return INT;}
 ";"      {TOKENTREE(SEMI);return SEMI;}
 ","      {TOKENTREE(COMMA);return COMMA;}
@@ -83,7 +110,7 @@ COMMENTB "/*"
 "||"     {TOKENTREE(OR);return OR;}
 "."      {TOKENTREE(DOT);return DOT;}
 "!"      {TOKENTREE(NOT);return NOT;}
-{TYPE}   {TOKENTREE(TYPE);return TYPE;}
+{TYPE}   {setStrVal();TOKENTREE(TYPE);return TYPE;}
 {LP}     {TOKENTREE(LP);return LP;}
 {RP}     {TOKENTREE(RP);return RP;}
 {LB}     {TOKENTREE(LB);return LB;}
@@ -95,7 +122,7 @@ COMMENTB "/*"
 {IF}     {TOKENTREE(IF);return IF;}
 {ELSE}   {TOKENTREE(ELSE);return ELSE;}
 {WHILE}  {TOKENTREE(WHILE);return WHILE;}
-{ID}     {TOKENTREE(ID);return ID;}
+{ID}     {setStrVal();TOKENTREE(ID);return ID;}
 {NEWLINE} {yycolumn=1;}
 {WHITESPACE} {;}
 {COMMENTL} {

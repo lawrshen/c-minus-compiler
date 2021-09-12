@@ -7,9 +7,16 @@ void yyerror(char* msg) {
 }
 
 %}
+%union {
+unsigned type_unsigned;
+float type_float;
+char type_string[64];
+}
 %locations
 /* declared tokens */
-%token INT FLOAT ID
+%token <type_unsigned>INT 
+%token <type_float>FLOAT
+%token <type_string>ID
 %token SEMI COMMA
 %token RELOP ASSIGNOP
 %token PLUS MINUS STAR DIV AND OR NOT
@@ -226,14 +233,14 @@ Args: Exp COMMA Args {
 %% 
 #include<stdarg.h>
 
-void insert(tree* parent,int num,...){
+void insert(syntaxNode* parent,int num,...){
     va_list ap;
     va_start(ap,num);
 
 }
 
-tree *insertTree(char *syntaxName, tree *parent, tree *pre_sibling) {
-    tree *child = (tree *)malloc(sizeof(tree));
+syntaxNode *insertsyntaxNode(char *syntaxName, syntaxNode *parent, syntaxNode *pre_sibling) {
+    syntaxNode *child = (syntaxNode *)malloc(sizeof(syntaxNode));
     child->syntaxName = syntaxName;
 
     if (parent != NULL) parent->first_child = child;
