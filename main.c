@@ -1,10 +1,29 @@
 #include <stdio.h>
+#include "tree.h"
 
 extern FILE *yyin;
 extern int yylex();
 extern int yyparse();
 extern void yyrestart(FILE *);
+syntaxNode *stroot = NULL;
+bool AError=false, BError=false;
 
+#if YYDEBUG
+extern int yydebug;
+#endif
+
+#if DEBUGFLEX
+int main(int argc, char** argv) {
+    if (argc > 1) {
+        if (!(yyin = fopen(argv[1], "r"))) {
+            perror(argv[1]);
+            return 1;
+        }
+    }
+    while (yylex() != 0);
+    return 0;
+}
+#else
 int main(int argc, char **argv)
 {
     if (argc <= 1)
@@ -16,6 +35,15 @@ int main(int argc, char **argv)
         return 1;
     }
     yyrestart(f);
+
+#if YYDEBUG
+    yydebug = 1;
+#endif
+
     yyparse();
+
+    if(!AError&&!BError)
+        printSyntaxTree();
     return 0;
 }
+#endif

@@ -1,13 +1,16 @@
 %{
 #include "tree.h"
 #include "syntax.tab.h"
+extern bool AError, BError;
 
 void logDebugf(char *str){
-    char* debugf="\033[36m[Debug INFO]:\033[0m Line %d :input %s : %s\n";
+    const char* debugf="\033[36m[Debug INFO]:\033[0m Line %d :input %s : %s\n";
     printf(debugf, yylineno, str, yytext);
 }
 void logErrorf(char* type, char* str){
-    char* errorf="\033[31mError type %s\033[0m at Line %d: \033[31m%s\033[0m \'%s\'\n";
+    if(strcmp(type,"A")==0)AError=true;
+    else if(strcmp(type,"B")==0)BError=true;
+    const char* errorf="\033[31mError type %s\033[0m at Line %d: \033[31m%s\033[0m \'%s\'\n";
     printf(errorf, type, yylineno, str, yytext);
 }
 void setIntVal(){
@@ -20,16 +23,19 @@ void setStrVal(){
     strcpy(yylval.sval,yytext);
 }
 
-#if DEBUGLEVEL
+#if DEBUGFLEX
 #define TOKENTREE(t) logDebugf(#t)
 #else
 #define TOKENTREE(t)                                                 \
     do                                                               \
     {                                                                \
         syntaxNode *node = (syntaxNode *)malloc(sizeof(syntaxNode)); \
+        node->line   = yylineno;                                     \
+        node->empty  = false;                                        \
         node->first_child = NULL;                                    \
         node->next_sibling = NULL;                                   \
-        strcpy(node->name, #t);                                      \
+        strcpy(node->name,#t);                                       \
+        node->token=t;                                               \
         switch (t)                                                   \
         {                                                            \
         case INT:                                                    \
@@ -71,12 +77,12 @@ FLOATERROR ({digits}\.)|(\.{digits})|({digit}*\.{digit}*[Ee][+-]?)
 ID {letter_}({letter_}|{digit}){0,31}
 RELOP >|<|>=|<=|==|!=
 TYPE int|float
-LP \(
-RP \)
-LB \[
-RB \]
-LC \{
-RC \}
+LP "("
+RP ")"
+LB "["
+RB "]"
+LC "{"
+RC "}"
 STRUCT struct
 RETURN return
 IF if
@@ -124,10 +130,14 @@ COMMENTB "/*"
 {COMMENTL} {
     char c = input();
     while (c != '\n') c = input();
+    #if DEBUGFLEX
     logDebugf("COMMENTL");
+    #endif
 }
 {COMMENTB} {
+    #if DEBUGFLEX
     logDebugf("COMMENTB");
+    #endif
 }
 . {logErrorf("A","Mysterious characters");}
 %%

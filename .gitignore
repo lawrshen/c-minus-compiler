@@ -2,3 +2,7 @@
 lex.*
 syntax.tab.*
 t.*
+.vscode/
+*.output
+main
+output/
