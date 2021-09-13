@@ -1,5 +1,7 @@
 %{
+#include "tree.h"
 #include "syntax.tab.h"
+
 void logDebugf(char *str){
     char* debugf="\033[36m[Debug INFO]:\033[0m Line %d :input %s : %s\n";
     printf(debugf, yylineno, str, yytext);
@@ -9,26 +11,17 @@ void logErrorf(char* type, char* str){
     printf(errorf, type, yylineno, str, yytext);
 }
 void setIntVal(){
-    yylval.type_unsigned=strtol(yytext,NULL,0);
+    yylval.ival=strtol(yytext,NULL,0);
 }
 void setFloatVal(){
-    yylval.type_float=strtof(yytext,NULL);
+    yylval.fval=strtof(yytext,NULL);
 }
 void setStrVal(){
-    strcpy(yylval.type_string,yytext);
+    strcpy(yylval.sval,yytext);
 }
-typedef struct node{
-    char* syntaxName;
-    union {
-    unsigned int    ival;
-    float           fval;
-    char            sval[64];
-    };
-    struct node *first_child,*next_sibling;
-}syntaxNode;
 
 #if DEBUGLEVEL
-#define TOKENTREE(t) logDebugf("t")
+#define TOKENTREE(t) logDebugf(#t)
 #else
 #define TOKENTREE(t)                                                 \
     do                                                               \
@@ -36,23 +29,26 @@ typedef struct node{
         syntaxNode *node = (syntaxNode *)malloc(sizeof(syntaxNode)); \
         node->first_child = NULL;                                    \
         node->next_sibling = NULL;                                   \
+        strcpy(node->name, #t);                                      \
         switch (t)                                                   \
         {                                                            \
         case INT:                                                    \
-            node->ival = yylval.type_unsigned;                       \
+            node->ival = yylval.ival;                                \
             break;                                                   \
         case FLOAT:                                                  \
-            node->fval = yylval.type_float;                          \
+            node->fval = yylval.fval;                                \
             break;                                                   \
         case ID:                                                     \
         case TYPE:                                                   \
-            strcpy(node->sval, yylval.type_string);                  \
+            strcpy(node->sval, yylval.sval);                         \
             break;                                                   \
         default:                                                     \
-            break; /* undefined value */                             \
+            break; /* invalid value */                               \
         }                                                            \
+        yylval.st_node = node;                                       \
     } while (0)
 #endif
+
 int yycolumn = 1;
 #define YY_USER_ACTION                                \
   yylloc.first_line   = yylloc.last_line = yylineno;  \

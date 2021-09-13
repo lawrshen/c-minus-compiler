@@ -4,14 +4,16 @@ all:
 	flex lexical.l
 	bison -d syntax.y
 	gcc main.c syntax.tab.c -lfl -ly -o parser
+	./parser w.cmm
 
 debug:
 	flex lexical.l
 	bison -d syntax.y
 	gcc main.c syntax.tab.c -D DEBUGLEVEL -lfl -ly -o parser
-
+	./parser w.cmm
+	
 test:
-	./cmm ./test/test1.cmm
+	./parser w.cmm
 
 clean:
 	rm lex.yy.c syntax.tab.* parser

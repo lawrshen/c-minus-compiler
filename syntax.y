@@ -1,4 +1,16 @@
 %{
+#include "tree.h"
+
+typedef struct {
+  syntaxNode* st_node;
+  union {
+    unsigned        ival;
+    float           fval;
+    char            sval[64];
+  };
+} node_type;
+#define YYSTYPE node_type
+
 #include "lex.yy.c"
 extern void logErrorf(char* type, char* str);
 
@@ -7,16 +19,12 @@ void yyerror(char* msg) {
 }
 
 %}
-%union {
-unsigned type_unsigned;
-float type_float;
-char type_string[64];
-}
+
 %locations
 /* declared tokens */
-%token <type_unsigned>INT 
-%token <type_float>FLOAT
-%token <type_string>ID
+%token INT 
+%token FLOAT
+%token ID
 %token SEMI COMMA
 %token RELOP ASSIGNOP
 %token PLUS MINUS STAR DIV AND OR NOT
@@ -39,7 +47,6 @@ char type_string[64];
 %%
 /* High-level Definitions */
 Program: ExtDefList{
-
     }
     ;
 ExtDefList: ExtDef ExtDefList
@@ -231,7 +238,6 @@ Args: Exp COMMA Args {
         }
     ;
 %% 
-#include<stdarg.h>
 
 void insert(syntaxNode* parent,int num,...){
     va_list ap;
@@ -241,8 +247,8 @@ void insert(syntaxNode* parent,int num,...){
 
 syntaxNode *insertsyntaxNode(char *syntaxName, syntaxNode *parent, syntaxNode *pre_sibling) {
     syntaxNode *child = (syntaxNode *)malloc(sizeof(syntaxNode));
-    child->syntaxName = syntaxName;
-
+    
+strcpy(child->name, syntaxName);
     if (parent != NULL) parent->first_child = child;
     if (pre_sibling != NULL) pre_sibling->next_sibling = child;
 
