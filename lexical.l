@@ -3,14 +3,19 @@
 #include "syntax.tab.h"
 extern bool AError, BError;
 
+#if COLORFUL
+const char* debugf="\033[36m[Debug INFO]:\033[0m Line %d :input %s : %s\n";
+const char* errorf="\033[31mError type %s\033[0m at Line %d: \033[31m%s\033[0m \'%s\'\n";
+#else
+const char* debugf="Debug INFO]: Line %d :input %s : %s\n";
+const char* errorf="Error type %s at Line %d: %s \'%s\'\n";
+#endif
 void logDebugf(char *str){
-    const char* debugf="\033[36m[Debug INFO]:\033[0m Line %d :input %s : %s\n";
     printf(debugf, yylineno, str, yytext);
 }
 void logErrorf(char* type, char* str){
     if(strcmp(type,"A")==0)AError=true;
     else if(strcmp(type,"B")==0)BError=true;
-    const char* errorf="\033[31mError type %s\033[0m at Line %d: \033[31m%s\033[0m \'%s\'\n";
     printf(errorf, type, yylineno, str, yytext);
 }
 void setIntVal(){
@@ -72,8 +77,9 @@ OCT 0[0-7]+
 OCTERROR 0[0-7]*[8-9A-WY-Za-wy-z]+[0-9A-Za-z]*
 HEX 0[xX][0-9A-Fa-f]+
 HEXERROR 0[xX][0-9A-Fa-f]*[g-zG-Z]+[0-9A-Za-z]*
-FLOAT ({digits}\.{digits})|({digit}*\.{digit}*[Ee][+-]?{digits})
-FLOATERROR ({digits}\.)|(\.{digits})|({digit}*\.{digit}*[Ee][+-]?)
+FLOATN {digits}\.{digits}
+FLOATE ({digit}*\.{digits}|{digits}\.{digit}*)[Ee][+-]?{digits}
+FLOAT {FLOATN}|{FLOATE}
 ID {letter_}({letter_}|{digit}){0,31}
 RELOP >|<|>=|<=|==|!=
 TYPE int|float
@@ -93,11 +99,17 @@ WHITESPACE [ \t\r\n]+
 COMMENTL "//"
 COMMENTB "/*"
 %%
+{STRUCT} {TOKENTREE(STRUCT);return STRUCT;}
+{RETURN} {TOKENTREE(RETURN);return RETURN;}
+{IF}     {TOKENTREE(IF);return IF;}
+{ELSE}   {TOKENTREE(ELSE);return ELSE;}
+{WHILE}  {TOKENTREE(WHILE);return WHILE;}
+{TYPE}   {setStrVal();TOKENTREE(TYPE);return TYPE;}
+{ID}     {setStrVal();TOKENTREE(ID);return ID;}
 {FLOAT}      {setFloatVal();TOKENTREE(FLOAT);return FLOAT;}
 {DEC}        {setIntVal();TOKENTREE(INT);return INT;}
 {OCT}        {setIntVal();TOKENTREE(INT);return INT;}
 {HEX}        {setIntVal();TOKENTREE(INT);return INT;}
-{FLOATERROR} {logErrorf("A","Illegal floating point number");return FLOAT;}
 {OCTERROR}   {logErrorf("A","Illegal octal number");return INT;}
 {HEXERROR}   {logErrorf("A","Illegal hexadecimal number");return INT;}
 ";"      {TOKENTREE(SEMI);return SEMI;}
@@ -112,19 +124,12 @@ COMMENTB "/*"
 "||"     {TOKENTREE(OR);return OR;}
 "."      {TOKENTREE(DOT);return DOT;}
 "!"      {TOKENTREE(NOT);return NOT;}
-{TYPE}   {setStrVal();TOKENTREE(TYPE);return TYPE;}
 {LP}     {TOKENTREE(LP);return LP;}
 {RP}     {TOKENTREE(RP);return RP;}
 {LB}     {TOKENTREE(LB);return LB;}
 {RB}     {TOKENTREE(RB);return RB;}
 {LC}     {TOKENTREE(LC);return LC;}
 {RC}     {TOKENTREE(RC);return RC;}
-{STRUCT} {TOKENTREE(STRUCT);return STRUCT;}
-{RETURN} {TOKENTREE(RETURN);return RETURN;}
-{IF}     {TOKENTREE(IF);return IF;}
-{ELSE}   {TOKENTREE(ELSE);return ELSE;}
-{WHILE}  {TOKENTREE(WHILE);return WHILE;}
-{ID}     {setStrVal();TOKENTREE(ID);return ID;}
 {NEWLINE} {yycolumn=1;}
 {WHITESPACE} {;}
 {COMMENTL} {
@@ -135,6 +140,15 @@ COMMENTB "/*"
     #endif
 }
 {COMMENTB} {
+    char a=input(),b=input();
+    while(a!='*'||b!='/'){
+        a=b;
+        b=input();
+        if(b=='\0'){ 
+            logErrorf("A","Missing */");
+            break;
+        }
+    }
     #if DEBUGFLEX
     logDebugf("COMMENTB");
     #endif

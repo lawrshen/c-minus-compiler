@@ -4,22 +4,24 @@ all:
 	@flex lexical.l
 	@bison -d syntax.y
 	@gcc main.c syntax.tab.c tree.c -lfl -ly -o parser
-	@./parser test.cmm
 
 debug:
 	@flex lexical.l
-	@bison -dt syntax.y
+	@bison -dtv syntax.y
 	@gcc main.c syntax.tab.c tree.c -D YYDEBUG -lfl -ly -o parser
-	@./parser test.cmm
 	
 flex:
 	flex lexical.l
 	bison -d syntax.y
-	gcc main.c syntax.tab.c tree.c -D DEBUGFLEX -lfl -ly -o parser
-	./parser test.cmm
+	gcc main.c syntax.tab.c tree.c -D DEBUGFLEX -D COLORFUL -lfl -ly -o parser
+
+color:
+	@flex lexical.l
+	@bison -dt syntax.y
+	@gcc main.c syntax.tab.c tree.c -D COLORFUL -lfl -ly -o parser
 
 test:
-	./parser w.cmm
+	./parser test.cmm
 
 clean:
 	rm lex.yy.c syntax.tab.* parser

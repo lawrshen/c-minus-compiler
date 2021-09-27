@@ -58,7 +58,7 @@ ExtDef: Specifier ExtDecList SEMI    {$$.st_node = newNode("ExtDef",3,@1.first_l
     | error FunDec CompSt            
     ;
 ExtDecList: VarDec                  {$$.st_node = newNode("ExtDecList",1,@1.first_line,$1.st_node);}
-    | VarDec COMMA ExtDecList       {$$.st_node = newNode("ExtDecList",2,@1.first_line,$1.st_node,$2.st_node);}
+    | VarDec COMMA ExtDecList       {$$.st_node = newNode("ExtDecList",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
     ;
 /* Specifiers */
 Specifier: TYPE         {$$.st_node = newNode("Specifier",1,@1.first_line,$1.st_node);}
@@ -79,6 +79,7 @@ VarDec: ID                  {$$.st_node = newNode("VarDec", 1, @1.first_line, $1
     ;
 FunDec: ID LP VarList RP    {$$.st_node = newNode("FunDec",4,@1.first_line,$1.st_node,$2.st_node,$3.st_node,$4.st_node);}
     | ID LP RP              {$$.st_node = newNode("FunDec",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
+    | error RP
     ;
 VarList: ParamDec COMMA VarList     {$$.st_node = newNode("VarList", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
     | ParamDec                      {$$.st_node = newNode("VarList", 1, @1.first_line, $1.st_node);}
@@ -96,7 +97,7 @@ Stmt: Exp SEMI                                  {$$.st_node = newNode("Stmt", 2,
     | CompSt                                    {$$.st_node = newNode("Stmt", 1, @1.first_line, $1.st_node);}
     | RETURN Exp SEMI                           {$$.st_node = newNode("Stmt", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);        }
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE   {$$.st_node = newNode("Stmt", 5, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node);}
-    | IF LP Exp RP Stmt ELSE Stmt               {$$.st_node = newNode("Stmt", 7, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node, $6, $7);}
+    | IF LP Exp RP Stmt ELSE Stmt               {$$.st_node = newNode("Stmt", 7, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node, $6.st_node, $7.st_node);}
     | WHILE LP Exp RP Stmt                      {$$.st_node = newNode("Stmt", 5, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node);}
     | error SEMI
     ;
@@ -112,6 +113,7 @@ DecList: Dec                {$$.st_node = newNode("DecList", 1, @1.first_line, $
     ;
 Dec: VarDec                 {$$.st_node = newNode("Dec", 1, @1.first_line, $1.st_node);}
     | VarDec ASSIGNOP Exp   {$$.st_node = newNode("Dec", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node); }
+    | error ASSIGNOP Exp
     ;
 
 /* Expressions */

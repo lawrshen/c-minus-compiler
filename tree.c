@@ -29,7 +29,6 @@ syntaxNode *newNode(char *_name, int num, ...)
     va_end(list);
   }
 
-  // printf("string: %s\n", n->first_child->name);
   return n;
 }
 
@@ -45,7 +44,6 @@ void printSyntaxTreeAux(syntaxNode *node, int indent)
   for (int i = 0; i < indent; ++i)
     printf("  ");
 
-  assert(node->name != NULL);
   printf("%s", node->name);
   if (node->token == -1){
     printf(" (%d)", node->line);
