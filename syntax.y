@@ -65,6 +65,7 @@ Specifier: TYPE         {$$.st_node = newNode("Specifier",1,@1.first_line,$1.st_
     | StructSpecifier   {$$.st_node = newNode("Specifier",1,@1.first_line,$1.st_node);}
     ;
 StructSpecifier: STRUCT OptTag LC DefList RC   {$$.st_node = newNode("StructSpecifier", 5, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node);}
+    | STRUCT OptTag LC error RC
     | STRUCT Tag                               {$$.st_node = newNode("StructSpecifier", 2, @1.first_line, $1.st_node, $2.st_node);}
     ;
 OptTag:     {$$.st_node = newNode("OptTag",0);}
@@ -89,17 +90,24 @@ ParamDec: Specifier VarDec          {$$.st_node = newNode("ParamDec", 2, @1.firs
 
 /* Statements */
 CompSt: LC DefList StmtList RC      {$$.st_node = newNode("CompSt", 4,@1.first_line, $1.st_node,$2.st_node,$3.st_node,$4.st_node); }
+    | error RC
     ;
 StmtList: Stmt StmtList  {$$.st_node = newNode("StmtList", 2, @1.first_line, $1.st_node, $2.st_node);}
     | /* empty */        {$$.st_node = newNode("StmtList", 0);}
     ;
 Stmt: Exp SEMI                                  {$$.st_node = newNode("Stmt", 2, @1.first_line, $1.st_node, $2.st_node);} 
     | CompSt                                    {$$.st_node = newNode("Stmt", 1, @1.first_line, $1.st_node);}
-    | RETURN Exp SEMI                           {$$.st_node = newNode("Stmt", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);        }
+    | RETURN Exp SEMI                           {$$.st_node = newNode("Stmt", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE   {$$.st_node = newNode("Stmt", 5, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node);}
     | IF LP Exp RP Stmt ELSE Stmt               {$$.st_node = newNode("Stmt", 7, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node, $6.st_node, $7.st_node);}
     | WHILE LP Exp RP Stmt                      {$$.st_node = newNode("Stmt", 5, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node);}
     | error SEMI
+    | IF LP error RP Stmt %prec LOWER_THAN_ELSE
+    | IF LP error RP Stmt ELSE Stmt
+    | IF LP Exp RP error ELSE Stmt
+    | WHILE LP error RP Stmt
+    | WHILE LP Exp error Stmt
+    | error Stmt
     ;
 
 /* Local Definitions */
@@ -107,6 +115,7 @@ DefList: Def DefList        {$$.st_node = newNode("DefList", 2, @1.first_line, $
     |                       {$$.st_node = newNode("DefList", 0);}
     ;
 Def: Specifier DecList SEMI {$$.st_node = newNode("Def", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node); }
+    | Specifier error SEMI
     ;
 DecList: Dec                {$$.st_node = newNode("DecList", 1, @1.first_line, $1.st_node);}
     | Dec COMMA DecList     {$$.st_node = newNode("DecList", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node); }
@@ -126,11 +135,20 @@ Exp: Exp ASSIGNOP Exp       {$$.st_node = newNode("Exp", 3, @1.first_line, $1.st
     | Exp STAR Exp          {$$.st_node = newNode("Exp", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
     | Exp DIV Exp           {$$.st_node = newNode("Exp", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
     | LP Exp RP             {$$.st_node = newNode("Exp", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
+    | LP error RP
+    | LP error SEMI
+    | LP error RC
     | MINUS Exp %prec NEG   {$$.st_node = newNode("Exp", 2, @1.first_line, $1.st_node, $2.st_node);}
     | NOT Exp               {$$.st_node = newNode("Exp", 2, @1.first_line, $1.st_node, $2.st_node);}
     | ID LP Args RP         {$$.st_node = newNode("Exp", 4, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node);}
     | ID LP RP              {$$.st_node = newNode("Exp", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
+    | ID LP error RP
+    | ID LP error SEMI
+    | ID LP error RC
     | Exp LB Exp RB         {$$.st_node = newNode("Exp", 4, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node);}
+    | Exp LB error RB
+    | Exp LB error SEMI
+    | Exp LB error RC
     | Exp DOT ID            {$$.st_node = newNode("Exp", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
     | ID                    {$$.st_node = newNode("Exp", 1, @1.first_line, $1.st_node);}
     | INT                   {$$.st_node = newNode("Exp", 1, @1.first_line, $1.st_node);}

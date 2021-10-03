@@ -17,6 +17,8 @@ void logErrorf(char* type, char* str){
     if(strcmp(type,"A")==0)AError=true;
     else if(strcmp(type,"B")==0)BError=true;
     printf(errorf, type, yylineno, str, yytext);
+    // test
+    // printf("Error Type %s at Line %d\n",type, yylineno);
 }
 void setIntVal(){
     yylval.ival=strtol(yytext,NULL,0);
