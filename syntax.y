@@ -54,18 +54,19 @@ ExtDefList: ExtDef ExtDefList   {$$.st_node = newNode("ExtDefList",2,@1.first_li
 ExtDef: Specifier ExtDecList SEMI    {$$.st_node = newNode("ExtDef",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
     | Specifier SEMI                 {$$.st_node = newNode("ExtDef",2,@1.first_line,$1.st_node,$2.st_node);}
     | Specifier FunDec CompSt        {$$.st_node = newNode("ExtDef",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
-    | error SEMI                     
-    | error FunDec CompSt            
+    | error SEMI                  
+    | error FunDec CompSt        
+    | Specifier error CompSt    
     ;
 ExtDecList: VarDec                  {$$.st_node = newNode("ExtDecList",1,@1.first_line,$1.st_node);}
     | VarDec COMMA ExtDecList       {$$.st_node = newNode("ExtDecList",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
+    | VarDec error ExtDecList
     ;
 /* Specifiers */
 Specifier: TYPE         {$$.st_node = newNode("Specifier",1,@1.first_line,$1.st_node);}
     | StructSpecifier   {$$.st_node = newNode("Specifier",1,@1.first_line,$1.st_node);}
     ;
 StructSpecifier: STRUCT OptTag LC DefList RC   {$$.st_node = newNode("StructSpecifier", 5, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node, $5.st_node);}
-    | STRUCT OptTag LC error RC
     | STRUCT Tag                               {$$.st_node = newNode("StructSpecifier", 2, @1.first_line, $1.st_node, $2.st_node);}
     ;
 OptTag:     {$$.st_node = newNode("OptTag",0);}
@@ -77,6 +78,7 @@ Tag: ID     {$$.st_node = newNode("Tag", 1, @1.first_line, $1.st_node);}
 /* Declarators */
 VarDec: ID                  {$$.st_node = newNode("VarDec", 1, @1.first_line, $1.st_node);} 
     | VarDec LB INT RB      {$$.st_node = newNode("VarDec", 4, @1.first_line, $1.st_node, $2.st_node, $3.st_node, $4.st_node);}
+    | VarDec LB error RB
     ;
 FunDec: ID LP VarList RP    {$$.st_node = newNode("FunDec",4,@1.first_line,$1.st_node,$2.st_node,$3.st_node,$4.st_node);}
     | ID LP RP              {$$.st_node = newNode("FunDec",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
@@ -84,6 +86,7 @@ FunDec: ID LP VarList RP    {$$.st_node = newNode("FunDec",4,@1.first_line,$1.st
     ;
 VarList: ParamDec COMMA VarList     {$$.st_node = newNode("VarList", 3, @1.first_line, $1.st_node, $2.st_node, $3.st_node);}
     | ParamDec                      {$$.st_node = newNode("VarList", 1, @1.first_line, $1.st_node);}
+    | ParamDec error SEMI
     ;
 ParamDec: Specifier VarDec          {$$.st_node = newNode("ParamDec", 2, @1.first_line, $1.st_node, $2.st_node);}
     ;
