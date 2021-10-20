@@ -1,11 +1,10 @@
-*.cmm
+.vscode/
 lex.*
 syntax.tab.*
-t.*
-.vscode/
 *.output
+*.cmm
 main
+parser
 output/
 Test*
-b/
-c/
+*.sh

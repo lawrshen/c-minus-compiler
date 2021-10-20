@@ -17,7 +17,7 @@ typedef struct node{
 }syntaxNode;
 
 extern syntaxNode *stroot;
-
+void printSyntaxNode(syntaxNode *);
 syntaxNode * newNode(char* _name,int num,...);
 void printSyntaxTree();
 void printSyntaxTreeAux(syntaxNode *, int);

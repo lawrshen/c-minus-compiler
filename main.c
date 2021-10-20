@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "tree.h"
+#include "semantics.h"
 
 extern FILE *yyin;
 extern int yylex();
@@ -40,10 +41,16 @@ int main(int argc, char **argv)
     yydebug = 1;
 #endif
 
+    // Lab 1: call yyparse to get syntax tree.
     yyparse();
 
-    if(!AError&&!BError)
-        printSyntaxTree();
+    // if(!AError&&!BError)
+        // printSyntaxTree();
+// printSyntaxNode(stroot);
+    
+    // Lab 2: conduct a full semantic scan.
+    semanticScan();
+    
     return 0;
 }
 #endif
