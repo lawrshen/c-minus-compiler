@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <assert.h>
 #include "tree.h"
 #include "syntax.tab.h"
 #include <string.h>
@@ -71,8 +70,4 @@ void printSyntaxTreeAux(syntaxNode *node, int indent)
   {
     printSyntaxTreeAux(child, indent + 1);
   }
-}
-
-void printSyntaxNode(syntaxNode *node){
-  printf("name: %s;line: %d;token: %d",node->name,node->line,node->token);
 }

@@ -28,6 +28,14 @@ enum SemanticErrors {
   SE_FUNCTION_CONFLICTING           = 19,
 };
 
+typedef struct STError {
+  enum SemanticErrors id;
+  const char *message1;
+  const char *message2;
+} STError;
+
+void logSTErrorf(enum SemanticErrors id, int line, const char *name);
+
 void semanticScan();
 void checkSemantics(syntaxNode *node, syntaxNode *parent);
 
@@ -38,27 +46,27 @@ void ParseExtDef(syntaxNode* cur);
 void ParseExtDecList(syntaxNode* cur, Type_ptr specifier_type);
 
 /*** Specifiers ***/
-Type_ptr Specifier(syntaxNode* cur);
-Type_ptr StructSpecifier(syntaxNode* cur);
+Type_ptr ParseSpecifier(syntaxNode* cur);
+Type_ptr ParseStructSpecifier(syntaxNode* cur);
 
 /*** Declarators ***/
-Symbol_ptr FunDec(syntaxNode* cur, Type_ptr specifier_type, int);
-Symbol_ptr VarList(syntaxNode* cur, Symbol_ptr func);
-Symbol_ptr ParamDec(syntaxNode* cur);
-Symbol_ptr VarDec(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseFunDec(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseVarList(syntaxNode* cur, Symbol_ptr func);
+Symbol_ptr ParseParamDec(syntaxNode* cur);
+Symbol_ptr ParseVarDec(syntaxNode* cur, Type_ptr specifier_type);
 
 /*** Local Definitions ***/
-Symbol_ptr DefList(syntaxNode* cur);
-Symbol_ptr Def(syntaxNode* cur);
-Symbol_ptr DecList(syntaxNode* cur, Type_ptr specifier_type);
-Symbol_ptr Dec(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseDefList(syntaxNode* cur);
+Symbol_ptr ParseDef(syntaxNode* cur);
+Symbol_ptr ParseDecList(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseDec(syntaxNode* cur, Type_ptr specifier_type);
 
 /*** Statments ***/
-void CompSt(syntaxNode* cur);
-void StmtList(syntaxNode* cur);
-void Stmt(syntaxNode* cur);
+void ParseCompSt(syntaxNode* cur);
+void ParseStmtList(syntaxNode* cur);
+void ParseStmt(syntaxNode* cur);
 
 /*** Expression ***/
-Type_ptr Exp(syntaxNode* cur);
+Type_ptr ParseExp(syntaxNode* cur);
 
 #endif // SEMANTIC_H

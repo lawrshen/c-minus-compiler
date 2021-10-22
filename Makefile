@@ -1,5 +1,5 @@
 CC = gcc
-SRC_C = main.c syntax.tab.c tree.c semantics.c
+SRC_C = main.c syntax.tab.c tree.c semantics.c symbol.c
 
 .PHONY: all debug lexical syntax clean test 
 

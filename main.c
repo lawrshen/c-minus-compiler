@@ -46,11 +46,11 @@ int main(int argc, char **argv)
 
     // if(!AError&&!BError)
         // printSyntaxTree();
-// printSyntaxNode(stroot);
     
     // Lab 2: conduct a full semantic scan.
-    semanticScan();
-    
+   semanticScan();
+    ParseProgram(stroot);
+
     return 0;
 }
 #endif
