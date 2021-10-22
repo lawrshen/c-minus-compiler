@@ -1,6 +1,8 @@
 #ifndef SYMBOL_H
 #define SYMBOL_H
 
+#include <stdbool.h>
+
 #define SYMBOL_SIZE 0x3fff
 #define COMPST_SIZE 0xff
 #define CLAIM_SIZE 0xff
@@ -34,6 +36,8 @@ static Type INT_TYPE = {BASIC, {B_INT}};
 static Type FLOAT_TYPE = {BASIC, {B_FLOAT}};
 static Type UNKNOWN_TYPE = {BASIC, {B_UNKNOWN}};
 
+bool equal_type(Type_ptr t1,Type_ptr t2);
+
 typedef struct _Symbol {
     char* name;
     Type_ptr type;
@@ -47,7 +51,7 @@ typedef struct _Symbol {
 Symbol_ptr new_symbol(int region);
 // Hash
 void hash_create();
-int hash_insert(Symbol_ptr node);
+bool hash_insert(Symbol_ptr node);
 Symbol_ptr hash_find(char* name);
 // Compst
 void compst_destroy(int depth);
