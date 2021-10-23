@@ -97,7 +97,6 @@ void ParseExtDef(syntaxNode *cur)
     Type_ptr specifier = ParseSpecifier(cur->first_child);
     syntaxNode *body = cur->first_child->next_sibling;
     if (astcmp(body, "SEMI")){
-        printf("\n Specifier! \n");
         return;
     }
     else if (astcmp(body, "ExtDecList")){
@@ -112,7 +111,10 @@ void ParseExtDef(syntaxNode *cur)
 
 void ParseExtDecList(syntaxNode *cur, Type_ptr specifier_type){
     //    ExtDecList → VarDec | VarDec COMMA ExtDecList
-    ParseVarDec(cur->first_child,specifier_type);
+    Symbol_ptr sym = ParseVarDec(cur->first_child,specifier_type);
+    if(hash_insert(sym)==false){
+        logSTErrorf(3,cur->first_child->line,sym->name);
+    }
     syntaxNode *comma=cur->first_child->next_sibling;
     if(comma){
         ParseExtDecList(comma->next_sibling,specifier_type);
@@ -168,8 +170,10 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
         // return val? #todo
         ParseVarList(body, sym);
     }
-    // error #todo
-    hash_insert(sym);
+    // error 4
+    if(hash_insert(sym)==false){
+        logSTErrorf(4,cur->first_child->line,sym->name);
+    }
     return sym;
 }
 
@@ -192,7 +196,6 @@ Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
     if(astcmp(cur->first_child,"ID")){
         sym->name = cur->first_child->sval;
         sym->type = specifier_type;
-        hash_insert(sym);
     }else{
         ParseVarDec(cur->first_child,specifier_type);
         // ARRAY

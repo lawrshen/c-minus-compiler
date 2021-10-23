@@ -6,6 +6,7 @@
 Symbol_ptr hash_table[SYMBOL_SIZE];
 Symbol_ptr compst[COMPST_SIZE];
 
+// equal_type return true if t1 is equal to t2
 bool equal_type(Type_ptr t1, Type_ptr t2) {
     if(t1->kind!=t2->kind){
         return false;
@@ -31,18 +32,18 @@ unsigned int hash_pjw(char* name) {
     return val;
 }
 
-bool cmp_hash(Symbol_ptr node_new, Symbol_ptr node_old) {
-    int activate = (node_new->region <= node_old->region);
-    if (activate && strcmp(node_new->name, node_old->name) == 0) {
+// hash_cmp return 0 if node_new is equal to node_old in hash slot
+int hash_cmp(Symbol_ptr node_new, Symbol_ptr node_old) {
+    if (strcmp(node_new->name, node_old->name) == 0) {
         switch (node_new->type->kind) {
             case FUNCTION:
-                if (node_old->type->kind == FUNCTION) return true;
+                if (node_old->type->kind == FUNCTION) return 0;
                 break;
             default:
-                if (node_old->type->kind != FUNCTION) return true;
+                if (node_old->type->kind != FUNCTION) return 0;
         }
     }
-    return false;
+    return 1;
 }
 
 Symbol_ptr new_symbol(int region) {
@@ -63,6 +64,7 @@ void hash_create(){
     }
 }
 
+// hash_insert return true if insert success
 bool hash_insert(Symbol_ptr node) {
     unsigned int idx = hash_pjw(node->name);
     if (hash_table[idx] == NULL) {
@@ -70,14 +72,18 @@ bool hash_insert(Symbol_ptr node) {
     } else {
         Symbol_ptr cur = hash_table[idx];
         while (cur->nxt) {
-            if (cmp_hash(node, cur)) return true;
+            if (hash_cmp(node, cur)==0){
+                return false;
+            } 
             cur = cur->nxt;
         }
-        if (cmp_hash(node, cur)) return true;
+        if (hash_cmp(node, cur)==0){
+            return false;
+        } 
         cur->nxt = node;
     }
 //    compst_insert(node);
-    return false;
+    return true;
 }
 
 Symbol_ptr hash_find(char* name) {
