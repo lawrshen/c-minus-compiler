@@ -295,7 +295,7 @@ Symbol_ptr ParseDec(syntaxNode *cur, Type_ptr specifier_type)
     //    Dec → VarDec | VarDec ASSIGNOP Exp
     Symbol_ptr sym = ParseVarDec(cur->first_child,specifier_type);
     syntaxNode *assignop=cur->first_child->next_sibling;
-    if(assignop&&equal_type(sym->type,ParseExp(assignop->next_sibling))){
+    if(assignop&&equal_type(sym->type,ParseExp(assignop->next_sibling))==false){
         logSTErrorf(5,cur->first_child->line,cur->first_child->sval);
     }
     return sym;
@@ -339,9 +339,12 @@ Type_ptr ParseExp(syntaxNode *cur)
     //    Exp → Exp ASSIGNOP Exp
     if (e2&&astcmp(e2, "ASSIGNOP"))
     {
-        Type_ptr type_1 = ParseExp(e1), type_2 = ParseExp(e3);
+        Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
         //error #todo
-        return type_1;
+        if(equal_type(t1,t2)==false){
+            logSTErrorf(5,e1->line,NULL);
+        }
+        return t1;
     }
     return &UNKNOWN_TYPE;
 }
