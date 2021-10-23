@@ -45,6 +45,11 @@ void ParseExtDefList(syntaxNode* cur);
 void ParseExtDef(syntaxNode* cur);
 void ParseExtDecList(syntaxNode* cur, Type_ptr specifier_type);
 
+/*** Statments ***/
+void ParseCompSt(syntaxNode* cur);
+void ParseStmtList(syntaxNode* cur);
+void ParseStmt(syntaxNode* cur);
+
 /*** Specifiers ***/
 Type_ptr ParseSpecifier(syntaxNode* cur);
 Type_ptr ParseStructSpecifier(syntaxNode* cur);
@@ -60,11 +65,6 @@ Symbol_ptr ParseDefList(syntaxNode* cur);
 Symbol_ptr ParseDef(syntaxNode* cur);
 Symbol_ptr ParseDecList(syntaxNode* cur, Type_ptr specifier_type);
 Symbol_ptr ParseDec(syntaxNode* cur, Type_ptr specifier_type);
-
-/*** Statments ***/
-void ParseCompSt(syntaxNode* cur);
-void ParseStmtList(syntaxNode* cur);
-void ParseStmt(syntaxNode* cur);
 
 /*** Expression ***/
 Type_ptr ParseExp(syntaxNode* cur);

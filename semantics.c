@@ -33,9 +33,15 @@ const STError SETable[] = {
   { 19, "Inconsistent declaration of function ", "" },
 };
 
+#if COLORFUL
+const char* STerrorf="\033[31mError type %d\033[0m at Line %d: ";
+#else
+const char* STerrorf="Error type %d at Line %d: ";
+#endif
+
 // Log an semantic error.
 void logSTErrorf(enum SemanticErrors id, int line, const char *name) {
-  fprintf(stderr, "Error type %d at Line %d: ", id, line);
+  fprintf(stderr, STerrorf, id, line);
   if (name != NULL) {
     fprintf(stderr, "%s\"%s\"%s", SETable[id].message1, name, SETable[id].message2);
   } else {
@@ -105,6 +111,10 @@ void ParseExtDef(syntaxNode *cur)
     else if (astcmp(body, "FunDec"))
     {
         Symbol_ptr sym = ParseFunDec(body, specifier);
+        // error 4
+        if(hash_insert(sym)==false){
+            logSTErrorf(4,cur->first_child->line,sym->name);
+        }
         ParseCompSt(body->next_sibling);
     }
 }
@@ -118,6 +128,44 @@ void ParseExtDecList(syntaxNode *cur, Type_ptr specifier_type){
     syntaxNode *comma=cur->first_child->next_sibling;
     if(comma){
         ParseExtDecList(comma->next_sibling,specifier_type);
+    }
+}
+
+void ParseCompSt(syntaxNode *cur)
+{
+    //    CompSt → LC DefList StmtList RC
+    region_depth++;
+    syntaxNode *deflist = cur->first_child->next_sibling, *stmtlist = deflist->next_sibling;
+    assert(deflist);
+    ParseDefList(deflist);
+    assert(stmtlist);
+    ParseStmtList(stmtlist);
+    compst_destroy(region_depth);
+    region_depth--;
+}
+
+void ParseStmtList(syntaxNode *cur)
+{
+    //    StmtList → Stmt StmtList | \epsilon
+    if (cur->first_child == NULL)
+    {
+        //     PSEUDO
+    }
+    else if (astcmp(cur->first_child, "Stmt"))
+    {
+        ParseStmt(cur->first_child);
+        ParseStmtList(cur->first_child->next_sibling);
+    }
+}
+
+void ParseStmt(syntaxNode *cur)
+{
+    //    Stmt → Exp SEMI | CompSt | RETURN Exp SEMI | IF LP Exp RP Stmt
+    //          | IF LP Exp RP Stmt ELSE Stmt | WHILE LP Exp RP Stmt
+    syntaxNode *body = cur->first_child;
+    if (astcmp(body, "Exp"))
+    {
+        ParseExp(body);
     }
 }
 
@@ -167,12 +215,7 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
     }
     else
     {
-        // return val? #todo
-        ParseVarList(body, sym);
-    }
-    // error 4
-    if(hash_insert(sym)==false){
-        logSTErrorf(4,cur->first_child->line,sym->name);
+        sym->type->u.function.params = ParseVarList(body, sym);
     }
     return sym;
 }
@@ -180,15 +223,25 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
 Symbol_ptr ParseVarList(syntaxNode *cur, Symbol_ptr func)
 {
     //    VarList → ParamDec COMMA VarList | ParamDec
-    return NULL;
+    func->type->u.function.params_num++;
+    Symbol_ptr paramdec = ParseParamDec(cur->first_child);
+    syntaxNode *comma=cur->first_child->next_sibling;
+    if(comma){
+        paramdec->cross_nxt=ParseVarList(comma->next_sibling,func);
+    }else{// ParamDec
+        paramdec->cross_nxt=NULL;
+    }
+    return paramdec;
 }
 
 Symbol_ptr ParseParamDec(syntaxNode *cur)
 {
     //    ParamDec → Specifier VarDec
-    return NULL;
+    Type_ptr specifier = ParseSpecifier(cur->first_child);
+    Symbol_ptr vardec = ParseVarDec(cur->first_child->next_sibling,specifier);
+    return vardec;
 }
-
+//#todo
 Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
 {
     //    VarDec → ID | VarDec LB INT RB
@@ -246,44 +299,6 @@ Symbol_ptr ParseDec(syntaxNode *cur, Type_ptr specifier_type)
         logSTErrorf(5,cur->first_child->line,cur->first_child->sval);
     }
     return sym;
-}
-
-void ParseCompSt(syntaxNode *cur)
-{
-    //    CompSt → LC DefList StmtList RC
-    region_depth++;
-    syntaxNode *deflist = cur->first_child->next_sibling, *stmtlist = deflist->next_sibling;
-    assert(deflist);
-    ParseDefList(deflist);
-    assert(stmtlist);
-    ParseStmtList(stmtlist);
-    compst_destroy(region_depth);
-    region_depth--;
-}
-
-void ParseStmtList(syntaxNode *cur)
-{
-    //    StmtList → Stmt StmtList | \epsilon
-    if (cur->first_child == NULL)
-    {
-        //     PSEUDO
-    }
-    else if (astcmp(cur->first_child, "Stmt"))
-    {
-        ParseStmt(cur->first_child);
-        ParseStmtList(cur->first_child->next_sibling);
-    }
-}
-
-void ParseStmt(syntaxNode *cur)
-{
-    //    Stmt → Exp SEMI | CompSt | RETURN Exp SEMI | IF LP Exp RP Stmt
-    //          | IF LP Exp RP Stmt ELSE Stmt | WHILE LP Exp RP Stmt
-    syntaxNode *body = cur->first_child;
-    if (astcmp(body, "Exp"))
-    {
-        ParseExp(body);
-    }
 }
 
 Type_ptr ParseExp(syntaxNode *cur)

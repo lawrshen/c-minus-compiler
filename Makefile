@@ -22,7 +22,7 @@ syntax:
 flex_level: lexical syntax
 	@gcc main.c syntax.tab.c tree.c -D DEBUGFLEX -D COLORFUL -lfl -ly -o parser
 
-test: all
+test: color
 	@./test.sh
 
 clean:
