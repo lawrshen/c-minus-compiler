@@ -61,9 +61,9 @@ Symbol_ptr ParseParamDec(syntaxNode* cur);
 Symbol_ptr ParseVarDec(syntaxNode* cur, Type_ptr specifier_type);
 
 /*** Local Definitions ***/
-void ParseDefList(syntaxNode* cur);
-void ParseDef(syntaxNode* cur);
-void ParseDecList(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseDefList(syntaxNode* cur);
+Symbol_ptr ParseDef(syntaxNode* cur);
+Symbol_ptr ParseDecList(syntaxNode* cur, Type_ptr specifier_type);
 Symbol_ptr ParseDec(syntaxNode* cur, Type_ptr specifier_type);
 
 /*** Expression ***/

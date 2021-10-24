@@ -9,6 +9,7 @@
     (strcmp(node->name, str) == 0)
 
 extern syntaxNode *stroot;
+int anonymous = 0; // anonymous structure counter
 int region_depth = 0;
 Symbol_ptr region_func=NULL;
 const STError SETable[] = {
@@ -211,7 +212,26 @@ Type_ptr ParseSpecifier(syntaxNode *cur)
 Type_ptr ParseStructSpecifier(syntaxNode *cur)
 {
     //    StructSpecifier → STRUCT OptTag LC DefList RC | STRUCT Tag
-    return NULL;
+    syntaxNode *tag=cur->first_child->next_sibling;
+    if(astcmp(tag,"Tag")){
+        Symbol_ptr sym = hash_find(tag->name);
+        if(sym == NULL){
+            logSTErrorf(17,tag->line,tag->name);
+        }else{
+            return sym->type;
+        }
+    }else{
+        if(tag->empty==true){
+            // ID never begins with a space so it's safe!
+            sprintf(tag->first_child->sval, " ANONYMOUS_STRUCT_%08x", anonymous++);
+        }
+        Symbol_ptr sym = new_symbol(region_depth);
+        sym->name=tag->first_child->sval;
+        sym->type = (Type_ptr)malloc(sizeof(Type));
+        sym->type->kind=STRUCTURE;
+        sym->type->u.structure = ParseDefList(tag->next_sibling->next_sibling);
+        return sym->type;
+    }
 }
 
 Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
@@ -273,28 +293,29 @@ Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
     return sym;
 }
 
-void ParseDefList(syntaxNode *cur)
+Symbol_ptr ParseDefList(syntaxNode *cur)
 {
     //    DefList → Def DefList | \epsilon
     if (cur->first_child == NULL)
     {
-        //     PASS
+        return NULL;
     }
     else if (astcmp(cur->first_child, "Def"))
     {
-        ParseDef(cur->first_child);
-        ParseDefList(cur->first_child->next_sibling);
+        Symbol_ptr sym = ParseDef(cur->first_child);
+        sym->cross_nxt = ParseDefList(cur->first_child->next_sibling);
+        return sym;
     }
 }
 
-void ParseDef(syntaxNode *cur)
+Symbol_ptr ParseDef(syntaxNode *cur)
 {
     //    Def → Specifier DecList SEMI
     Type_ptr specifier = ParseSpecifier(cur->first_child);
-    ParseDecList(cur->first_child->next_sibling,specifier);
+    return ParseDecList(cur->first_child->next_sibling,specifier);
 }
 
-void ParseDecList(syntaxNode *cur, Type_ptr specifier_type)
+Symbol_ptr ParseDecList(syntaxNode *cur, Type_ptr specifier_type)
 {
     //    DecList → Dec | Dec COMMA DecList
     Symbol_ptr sym = ParseDec(cur->first_child,specifier_type);
@@ -303,8 +324,9 @@ void ParseDecList(syntaxNode *cur, Type_ptr specifier_type)
     }
     syntaxNode *comma=cur->first_child->next_sibling;
     if(comma){
-        ParseDecList(comma->next_sibling,specifier_type);
+        sym->cross_nxt = ParseDecList(comma->next_sibling,specifier_type);
     }
+    return sym;
 }
 
 Symbol_ptr ParseDec(syntaxNode *cur, Type_ptr specifier_type)
