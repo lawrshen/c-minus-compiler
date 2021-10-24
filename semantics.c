@@ -306,23 +306,35 @@ Symbol_ptr ParseDec(syntaxNode *cur, Type_ptr specifier_type)
 
 Type_ptr ParseExp(syntaxNode *cur)
 {
-    //        | Exp AND Exp
-    //        | Exp OR Exp
-    //        | Exp RELOP Exp
-    //        | Exp PLUS Exp
-    //        | Exp MINUS Exp
-    //        | Exp STAR Exp
-    //        | Exp DIV Exp
-    //        | LP Exp RP
-    //        | MINUS Exp
-    //        | NOT Exp
-    //        | Exp LB Exp RB
-    //        | Exp DOT ID
     syntaxNode* e1=cur->first_child,
               * e2=e1 ? e1->next_sibling:NULL,
               * e3=e2 ? e2->next_sibling:NULL;
+    // Exp → LP Exp RP
+    if(astcmp(e1,"LP")){
+        ParseExp(e2);
+    }
+    // Exp → Exp LB Exp RB
+    else if(e2&&astcmp(e2,"LB")){
+        Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
+        if(t1->kind!=ARRAY){
+            logSTErrorf(10,e1->line,e1->sval);
+        }
+        if(equal_type(t2,&INT_TYPE)==false){
+            logSTErrorf(12,e1->line,e3->sval);
+        }
+        return t1->u.array.elem;
+    }
+    // Exp → Exp DOT ID
+    else if(e2&&astcmp(e2,"DOT")){
+        Type_ptr t = ParseExp(e1);
+        if(t->kind!=STRUCTURE){
+            logSTErrorf(13,e1->line,e1->sval);
+        }
+        // error14 #todo
+        return ParseExp(e3);
+    }
     // Exp → ID LP Args RP | ID LP RP | ID
-    if (astcmp(e1, "ID")){
+    else if (astcmp(e1, "ID")){
         Symbol_ptr target = hash_find(e1->sval);
         if (target == NULL){
             if(e2==NULL){
@@ -340,7 +352,7 @@ Type_ptr ParseExp(syntaxNode *cur)
         return &FLOAT_TYPE;
     }
     //    Exp → Exp ASSIGNOP Exp
-    if (e2&&astcmp(e2, "ASSIGNOP"))
+    else if (e2&&astcmp(e2, "ASSIGNOP"))
     {
         if(!astcmp(e1,"ID")){
             logSTErrorf(6,e1->line,NULL);
@@ -351,6 +363,24 @@ Type_ptr ParseExp(syntaxNode *cur)
             logSTErrorf(5,e1->line,NULL);
         }
         return t1;
+    }
+    // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
+    else if(e2&&e3&&astcmp(e3,"Exp")){
+        if(astcmp(e2,"AND")||astcmp(e2,"OR")){
+            Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
+            if(!(equal_type(t1,t2)&& equal_type(t1,&INT_TYPE))){
+                logSTErrorf(7,e1->line,NULL);
+            }
+        }else{
+            Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
+            if( !(equal_type(t1,t2)&&(equal_type(t1,&INT_TYPE)|| equal_type(t1,&FLOAT_TYPE))) ){
+                logSTErrorf(7,e1->line,NULL);
+            }
+        }
+    }
+    // Exp → MINUS Exp | NOT Exp
+    else if(e2&&astcmp(e2, "Exp")){
+        ParseExp(e2);
     }
     return &UNKNOWN_TYPE;
 }
