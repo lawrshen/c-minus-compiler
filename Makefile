@@ -9,6 +9,10 @@ all: lexical syntax
 color: lexical syntax
 	@$(CC) $(SRC_C) -D COLORFUL -lfl -ly -o parser
 	
+ast: lexical syntax
+	@$(CC) $(SRC_C) -D ASTREE -lfl -ly -o parser \
+	&& ./test.sh > zw.cmm
+
 yydebug: lexical
 	@bison -dtv syntax.y
 	@$(CC) $(SRC_C) -D YYDEBUG -lfl -ly -o parser

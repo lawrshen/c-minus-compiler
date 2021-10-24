@@ -241,7 +241,7 @@ Symbol_ptr ParseParamDec(syntaxNode *cur)
     Symbol_ptr vardec = ParseVarDec(cur->first_child->next_sibling,specifier);
     return vardec;
 }
-//#todo
+
 Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
 {
     //    VarDec → ID | VarDec LB INT RB
@@ -250,8 +250,11 @@ Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
         sym->name = cur->first_child->sval;
         sym->type = specifier_type;
     }else{
-        ParseVarDec(cur->first_child,specifier_type);
-        // ARRAY
+        Type_ptr array_type = (Type_ptr)malloc(sizeof(Type));
+        array_type->kind=ARRAY;
+        array_type->u.array.size=cur->first_child->next_sibling->next_sibling->ival;
+        array_type->u.array.elem=specifier_type;
+        sym = ParseVarDec(cur->first_child,array_type);
     }
     return sym;
 }
@@ -340,7 +343,6 @@ Type_ptr ParseExp(syntaxNode *cur)
     if (e2&&astcmp(e2, "ASSIGNOP"))
     {
         Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
-        //error #todo
         if(equal_type(t1,t2)==false){
             logSTErrorf(5,e1->line,NULL);
         }
