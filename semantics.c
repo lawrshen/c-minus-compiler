@@ -353,7 +353,7 @@ Type_ptr ParseExp(syntaxNode *cur)
     else if(e2&&astcmp(e2,"LB")){
         Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
         if(t1->kind!=ARRAY){
-            logSTErrorf(10,e1->line,e1->sval);
+            logSTErrorf(10,e1->line,e1->first_child->sval);
         }
         if(equal_type(t2,&INT_TYPE)==false){
             logSTErrorf(12,e1->line,e3->sval);
@@ -379,6 +379,10 @@ Type_ptr ParseExp(syntaxNode *cur)
                 logSTErrorf(2,e1->line,e1->sval);
             }
             return &UNKNOWN_TYPE;
+        }else if(e2){
+            if(id->type->kind!=FUNCTION){
+                logSTErrorf(11,e1->line,e1->sval);
+            }
         }else if(e3&&astcmp(e3,"RP")){
             if(id->type->u.function.params_num!=0){
                 logSTErrorf(9,e1->line,id->name);
