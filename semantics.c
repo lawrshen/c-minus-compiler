@@ -349,16 +349,33 @@ Type_ptr ParseExp(syntaxNode *cur)
     }
     // Exp → ID LP Args RP | ID LP RP | ID
     else if (astcmp(e1, "ID")){
-        Symbol_ptr target = hash_find(e1->sval);
-        if (target == NULL){
+        Symbol_ptr id = hash_find(e1->sval);
+        if (id == NULL){
             if(e2==NULL){
                 logSTErrorf(1,e1->line,e1->sval);
             }else{
                 logSTErrorf(2,e1->line,e1->sval);
             }
             return &UNKNOWN_TYPE;
+        }else if(e3&&astcmp(e3,"RP")){
+            if(id->type->u.function.params_num!=0){
+                logSTErrorf(9,e1->line,id->name);
+            }
+        }else if(e3&& astcmp(e3,"Args")){
+            int num=0;
+            Symbol_ptr arg = ParseArgs(e3,&num);
+            if(id->type->u.function.params_num!=num){
+                logSTErrorf(9,e1->line,id->name);
+            }else{
+                for(Symbol_ptr param=id->type->u.function.params;param;param=param->cross_nxt,arg=arg->cross_nxt){
+                    if(equal_type(param->type,arg->type)==false){
+                        logSTErrorf(9,e1->line,id->name);
+                        break;
+                    }
+                }
+            }
         }
-        return target->type;
+        return id->type;
     // Exp → INT | FLOAT
     } else if(astcmp(e1,"INT")){
         return &INT_TYPE;
@@ -397,4 +414,16 @@ Type_ptr ParseExp(syntaxNode *cur)
         ParseExp(e2);
     }
     return &UNKNOWN_TYPE;
+}
+
+Symbol_ptr ParseArgs(syntaxNode *cur,int* num) {
+//    Args → Exp COMMA Args | Exp
+    (*num)++;
+    Symbol_ptr sym = (Symbol_ptr)malloc(sizeof(Symbol));
+    sym->type= ParseExp(cur->first_child);
+    syntaxNode *comma=cur->first_child->next_sibling;
+    if(comma){
+        sym->cross_nxt = ParseArgs(comma->next_sibling,num);
+    }
+    return sym;
 }

@@ -68,5 +68,6 @@ Symbol_ptr ParseDec(syntaxNode* cur, Type_ptr specifier_type);
 
 /*** Expression ***/
 Type_ptr ParseExp(syntaxNode* cur);
+Symbol_ptr ParseArgs(syntaxNode* cur,int* num);
 
 #endif // SEMANTIC_H
