@@ -180,11 +180,11 @@ Type_ptr ParseSpecifier(syntaxNode *cur)
         type->kind = BASIC;
         if (strcmp(body->sval, "int") == 0)
         {
-            type->u.basic = INT;
+            type->u.basic = B_INT;
         }
         else
         {
-            type->u.basic = FLOAT;
+            type->u.basic = B_FLOAT;
         }
     }
     else if (astcmp(body, "StructSpecifier"))
@@ -342,6 +342,10 @@ Type_ptr ParseExp(syntaxNode *cur)
     //    Exp → Exp ASSIGNOP Exp
     if (e2&&astcmp(e2, "ASSIGNOP"))
     {
+        if(!astcmp(e1,"ID")){
+            logSTErrorf(6,e1->line,NULL);
+            return &UNKNOWN_TYPE;
+        }
         Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
         if(equal_type(t1,t2)==false){
             logSTErrorf(5,e1->line,NULL);
