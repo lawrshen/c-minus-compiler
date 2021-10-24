@@ -8,7 +8,6 @@
 #define CLAIM_SIZE 0xff
 
 typedef enum _BASIC_TYPE { B_UNKNOWN, B_INT, B_FLOAT } BASIC_TYPE;
-typedef enum _SEARCH_TYPE {SEARCH_ALL, SEARCH_VARIABLE, SEARCH_FUNCTION, SEARCH_PROTO} SEARCH_TYPE;
 typedef struct _Type* Type_ptr;
 typedef struct _Symbol* Symbol_ptr;
 typedef struct _Type {
