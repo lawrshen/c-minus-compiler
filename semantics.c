@@ -10,6 +10,7 @@
 
 extern syntaxNode *stroot;
 int region_depth = 0;
+Symbol_ptr region_func=NULL;
 const STError SETable[] = {
   {  0, "Pseudo error", "" },
   {  1, "Use of undefined variable ", "" },
@@ -115,7 +116,9 @@ void ParseExtDef(syntaxNode *cur)
         if(hash_insert(sym)==false){
             logSTErrorf(4,cur->first_child->line,sym->name);
         }
+        region_func = sym;
         ParseCompSt(body->next_sibling);
+        region_func = NULL;
     }
 }
 
@@ -157,15 +160,26 @@ void ParseStmtList(syntaxNode *cur)
         ParseStmtList(cur->first_child->next_sibling);
     }
 }
-
+//todo if/while
 void ParseStmt(syntaxNode *cur)
 {
-    //    Stmt → Exp SEMI | CompSt | RETURN Exp SEMI | IF LP Exp RP Stmt
-    //          | IF LP Exp RP Stmt ELSE Stmt | WHILE LP Exp RP Stmt
+    //    Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt | WHILE LP Exp RP Stmt
     syntaxNode *body = cur->first_child;
+    // Stmt → Exp SEMI
     if (astcmp(body, "Exp"))
     {
         ParseExp(body);
+    }
+    // Stmt → CompSt
+    else if(astcmp(body,"CompSt")){
+        ParseCompSt(body);
+    }
+    // Stmt → RETURN Exp SEMI
+    else if(astcmp(body,"RETURN")){
+        Type_ptr t = ParseExp(body->next_sibling);
+        if(equal_type(t,region_func->type->u.function.ret)==false){
+            logSTErrorf(8,body->line,NULL);
+        }
     }
 }
 
