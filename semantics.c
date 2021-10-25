@@ -216,9 +216,9 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
     //    StructSpecifier → STRUCT OptTag LC DefList RC | STRUCT Tag
     syntaxNode *tag=cur->first_child->next_sibling;
     if(astcmp(tag,"Tag")){
-        Symbol_ptr sym = hash_find(tag->name);
+        Symbol_ptr sym = hash_find(tag->first_child->sval);
         if(sym == NULL){
-            logSTErrorf(17,tag->line,tag->name);
+            logSTErrorf(17,tag->line,tag->first_child->sval);
         }else{
             return sym->type;
         }
@@ -241,6 +241,9 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
         structure_name = NULL;
         compst_destroy(region_depth);
         region_depth--;
+        if(hash_insert(sym)==false){
+            logSTErrorf(16,tag->line,tag->sval);
+        }
         return sym->type;
     }
 }
@@ -292,12 +295,7 @@ Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
     //    VarDec → ID | VarDec LB INT RB
     Symbol_ptr sym = new_symbol(region_depth);
     if(astcmp(cur->first_child,"ID")){
-        char* name = (char*)malloc(sizeof(char)*64);
-        strcpy(name,cur->first_child->sval);
-        if(region_in_structure){
-            strcat(name,structure_name);
-        }
-        sym->name = name;
+        sym->name = cur->first_child->sval;
         sym->type = specifier_type;
     }else{
         Type_ptr array_type = (Type_ptr)malloc(sizeof(Type));
@@ -309,6 +307,7 @@ Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
     return sym;
 }
 
+Symbol_ptr DecList_last_ptr = NULL;
 Symbol_ptr ParseDefList(syntaxNode *cur)
 {
     //    DefList → Def DefList | \epsilon
@@ -319,7 +318,9 @@ Symbol_ptr ParseDefList(syntaxNode *cur)
     else if (astcmp(cur->first_child, "Def"))
     {
         Symbol_ptr sym = ParseDef(cur->first_child);
-        sym->cross_nxt = ParseDefList(cur->first_child->next_sibling);
+        Symbol_ptr cur_last_ptr = DecList_last_ptr;
+        DecList_last_ptr = NULL;
+        cur_last_ptr->cross_nxt=ParseDefList(cur->first_child->next_sibling);
         return sym;
     }
 }
@@ -346,6 +347,9 @@ Symbol_ptr ParseDecList(syntaxNode *cur, Type_ptr specifier_type)
     if(comma){
         sym->cross_nxt = ParseDecList(comma->next_sibling,specifier_type);
     }
+    if (DecList_last_ptr == NULL) {
+        DecList_last_ptr = sym;
+    }
     return sym;
 }
 
@@ -356,6 +360,8 @@ Symbol_ptr ParseDec(syntaxNode *cur, Type_ptr specifier_type)
     syntaxNode *assignop=cur->first_child->next_sibling;
     if(assignop&&equal_type(sym->type,ParseExp(assignop->next_sibling))==false){
         logSTErrorf(5,cur->first_child->line,cur->first_child->sval);
+    }else if(assignop&&region_in_structure){
+        logSTErrorf(15,cur->first_child->line,cur->first_child->first_child->sval);
     }
     return sym;
 }
@@ -376,7 +382,7 @@ Type_ptr ParseExp(syntaxNode *cur)
             logSTErrorf(10,e1->line,e1->first_child->sval);
         }
         if(equal_type(t2,&INT_TYPE)==false){
-            logSTErrorf(12,e1->line,e3->sval);
+            logSTErrorf(12,e1->line,e1->first_child->sval);
         }
         return t1->u.array.elem;
     }
@@ -384,10 +390,21 @@ Type_ptr ParseExp(syntaxNode *cur)
     else if(e2&&astcmp(e2,"DOT")){
         Type_ptr t = ParseExp(e1);
         if(t->kind!=STRUCTURE){
-            logSTErrorf(13,e1->line,e1->sval);
+            logSTErrorf(13,e1->line,e1->first_child->sval);
+            return &UNKNOWN_TYPE;
         }
-        // error14 #todo
-        return ParseExp(e3);
+        Type_ptr ret = NULL;
+        for (Symbol_ptr p = t->u.structure; p; p = p->cross_nxt) {
+            if (strcmp(p->name, e3->sval) == 0) {
+                ret = p->type;
+                break;
+            }
+        }
+        if(ret==NULL){
+            logSTErrorf(14,e2->line,e3->sval);
+            return &UNKNOWN_TYPE;
+        }
+        return ret;
     }
     // Exp → ID LP Args RP | ID LP RP | ID
     else if (astcmp(e1, "ID")){
@@ -431,7 +448,7 @@ Type_ptr ParseExp(syntaxNode *cur)
     //    Exp → Exp ASSIGNOP Exp
     else if (e2&&astcmp(e2, "ASSIGNOP"))
     {
-        if(!astcmp(e1,"ID")){
+        if(astcmp(e1->first_child,"INT")|| astcmp(e1->first_child,"FLOAT")){
             logSTErrorf(6,e1->line,NULL);
             return &UNKNOWN_TYPE;
         }
