@@ -25,10 +25,10 @@ const STError SETable[] = {
   {  7, "Type mismatched for operands", "" },
   {  8, "Type mismatched for return" },
   {  9, "Arguments mismatched for function ", "" },
-  { 10, "Array access on non-array variable", "" },
+  { 10, "Array access on non-array variable ", "" },
   { 11, "Function call on non-function variable ", "" },
-  { 12, "Non integer offset of an array", "" },
-  { 13, "Field access on non-struct variable", "" },
+  { 12, "Non integer offset of an array ", "" },
+  { 13, "Field access on non-struct variable ", "" },
   { 14, "Access to undefined field ", " in struct" },
   { 15, "Redefinition or initialization of field ", " in struct" },
   { 16, "Duplicated name ", " of struct" },
@@ -163,10 +163,9 @@ void ParseStmtList(syntaxNode *cur)
         ParseStmtList(cur->first_child->next_sibling);
     }
 }
-//todo if/while
+
 void ParseStmt(syntaxNode *cur)
 {
-    //     | WHILE LP Exp RP Stmt
     syntaxNode *body = cur->first_child;
     // Stmt → Exp SEMI
     if (astcmp(body, "Exp"))
@@ -186,8 +185,26 @@ void ParseStmt(syntaxNode *cur)
     }
     // Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt
     else if(astcmp(body,"IF")){
-        syntaxNode *exp=body->next_sibling->next_sibling;
-        ParseExp(exp);
+        syntaxNode* exp=body->next_sibling->next_sibling,
+                  * stmt=exp->next_sibling->next_sibling;
+        Type_ptr t = ParseExp(exp);
+        if(t->kind!=BASIC){
+            logSTErrorf(7,body->line,NULL);
+        }
+        ParseStmt(stmt);
+        if(stmt->next_sibling){
+            ParseStmt(stmt->next_sibling->next_sibling);
+        }
+    }
+    // Stmt → WHILE LP Exp RP Stmt
+    else if(astcmp(body,"WHILE")){
+        syntaxNode* exp=body->next_sibling->next_sibling,
+                * stmt=exp->next_sibling->next_sibling;
+        Type_ptr t = ParseExp(exp);
+        if(t->kind!=BASIC){
+            logSTErrorf(7,body->line,NULL);
+        }
+        ParseStmt(stmt);
     }
 }
 
@@ -269,6 +286,11 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
     else
     {
         sym->type->u.function.params = ParseVarList(body, sym);
+        for(Symbol_ptr p=sym->type->u.function.params;p;p=p->cross_nxt){
+            if(hash_insert(p)==false){
+                logSTErrorf(3,cur->first_child->line,sym->name);
+            }
+        }
     }
     return sym;
 }
@@ -442,7 +464,7 @@ Type_ptr ParseExp(syntaxNode *cur)
                 }
             }
         }
-        return id->type;
+        return id->type->kind==FUNCTION? id->type->u.function.ret:id->type;
     // Exp → INT | FLOAT
     } else if(astcmp(e1,"INT")){
         return &INT_TYPE;
