@@ -9,9 +9,9 @@ Symbol_ptr compst[COMPST_SIZE];
 // equal_type return true if t1 is equal to t2
 bool equal_type(Type_ptr t1, Type_ptr t2) {
     if(t1->kind!=t2->kind){
-        return false;
+        return equal_type(t1,&UNKNOWN_TYPE)||equal_type(t2,&UNKNOWN_TYPE);// duplicate error info
     }else if(t1->kind==BASIC){
-        return t1->u.basic==t2->u.basic&&t1->u.basic!=B_UNKNOWN;
+        return t1->u.basic==t2->u.basic;
     }else if(t1->kind==ARRAY){
         return equal_type(t1->u.array.elem,t2->u.array.elem);
     }else if(t1->kind==STRUCTURE){

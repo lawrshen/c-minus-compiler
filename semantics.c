@@ -416,24 +416,23 @@ Type_ptr ParseExp(syntaxNode *cur)
                 logSTErrorf(2,e1->line,e1->sval);
             }
             return &UNKNOWN_TYPE;
-        }else if(e2){
-            if(id->type->kind!=FUNCTION){
-                logSTErrorf(11,e1->line,e1->sval);
-            }
-        }else if(e3&&astcmp(e3,"RP")){
-            if(id->type->u.function.params_num!=0){
-                logSTErrorf(9,e1->line,id->name);
-            }
+        }else if(e2&&id->type->kind!=FUNCTION){
+            logSTErrorf(11,e1->line,e1->sval);
+            return &UNKNOWN_TYPE;
+        }else if(e3&&astcmp(e3,"RP")&&id->type->u.function.params_num!=0){
+            logSTErrorf(9,e1->line,id->name);
+            return &UNKNOWN_TYPE;
         }else if(e3&& astcmp(e3,"Args")){
             int num=0;
             Symbol_ptr arg = ParseArgs(e3,&num);
             if(id->type->u.function.params_num!=num){
                 logSTErrorf(9,e1->line,id->name);
+                return &UNKNOWN_TYPE;
             }else{
                 for(Symbol_ptr param=id->type->u.function.params;param;param=param->cross_nxt,arg=arg->cross_nxt){
                     if(equal_type(param->type,arg->type)==false){
                         logSTErrorf(9,e1->line,id->name);
-                        break;
+                        return &UNKNOWN_TYPE;
                     }
                 }
             }
@@ -455,6 +454,7 @@ Type_ptr ParseExp(syntaxNode *cur)
         Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
         if(equal_type(t1,t2)==false){
             logSTErrorf(5,e1->line,NULL);
+            return &UNKNOWN_TYPE;
         }
         return t1;
     }
@@ -464,11 +464,13 @@ Type_ptr ParseExp(syntaxNode *cur)
             Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
             if(!(equal_type(t1,t2)&& equal_type(t1,&INT_TYPE))){
                 logSTErrorf(7,e1->line,NULL);
+                return &UNKNOWN_TYPE;
             }
         }else{
             Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
             if( !(equal_type(t1,t2)&&(equal_type(t1,&INT_TYPE)|| equal_type(t1,&FLOAT_TYPE))) ){
                 logSTErrorf(7,e1->line,NULL);
+                return &UNKNOWN_TYPE;
             }
         }
     }
