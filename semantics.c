@@ -166,7 +166,7 @@ void ParseStmtList(syntaxNode *cur)
 //todo if/while
 void ParseStmt(syntaxNode *cur)
 {
-    //    Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt | WHILE LP Exp RP Stmt
+    //     | WHILE LP Exp RP Stmt
     syntaxNode *body = cur->first_child;
     // Stmt → Exp SEMI
     if (astcmp(body, "Exp"))
@@ -183,6 +183,11 @@ void ParseStmt(syntaxNode *cur)
         if(equal_type(t,region_func->type->u.function.ret)==false){
             logSTErrorf(8,body->line,NULL);
         }
+    }
+    // Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt
+    else if(astcmp(body,"IF")){
+        syntaxNode *exp=body->next_sibling->next_sibling;
+        ParseExp(exp);
     }
 }
 
@@ -242,7 +247,7 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
         compst_destroy(region_depth);
         region_depth--;
         if(hash_insert(sym)==false){
-            logSTErrorf(16,tag->line,tag->sval);
+            logSTErrorf(16,tag->line,sym->name);
         }
         return sym->type;
     }
@@ -460,14 +465,16 @@ Type_ptr ParseExp(syntaxNode *cur)
     }
     // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
     else if(e2&&e3&&astcmp(e3,"Exp")){
+        Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
+        if(equal_type(t1,&UNKNOWN_TYPE)|| equal_type(t2,&UNKNOWN_TYPE)){
+            return &UNKNOWN_TYPE;
+        }
         if(astcmp(e2,"AND")||astcmp(e2,"OR")){
-            Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
             if(!(equal_type(t1,t2)&& equal_type(t1,&INT_TYPE))){
                 logSTErrorf(7,e1->line,NULL);
                 return &UNKNOWN_TYPE;
             }
         }else{
-            Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
             if( !(equal_type(t1,t2)&&(equal_type(t1,&INT_TYPE)|| equal_type(t1,&FLOAT_TYPE))) ){
                 logSTErrorf(7,e1->line,NULL);
                 return &UNKNOWN_TYPE;
