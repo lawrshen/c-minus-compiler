@@ -10,6 +10,8 @@
 
 extern syntaxNode *stroot;
 int anonymous = 0; // anonymous structure counter
+bool region_in_structure = false;
+char* structure_name = NULL;
 int region_depth = 0;
 Symbol_ptr region_func=NULL;
 const STError SETable[] = {
@@ -221,15 +223,24 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
             return sym->type;
         }
     }else{
-        if(tag->empty==true){
+        char* name = tag->empty? NULL:tag->first_child->sval;
+        if(tag->empty){
             // ID never begins with a space so it's safe!
-            sprintf(tag->first_child->sval, " ANONYMOUS_STRUCT_%08x", anonymous++);
+            name = (char*)malloc(sizeof(char)*32);
+            sprintf(name, " ANONYMOUS_STRUCT_%08x", anonymous++);
         }
         Symbol_ptr sym = new_symbol(region_depth);
-        sym->name=tag->first_child->sval;
+        sym->name=name;
         sym->type = (Type_ptr)malloc(sizeof(Type));
         sym->type->kind=STRUCTURE;
+        region_depth++;
+        structure_name = name;
+        region_in_structure = true;
         sym->type->u.structure = ParseDefList(tag->next_sibling->next_sibling);
+        region_in_structure = false;
+        structure_name = NULL;
+        compst_destroy(region_depth);
+        region_depth--;
         return sym->type;
     }
 }
@@ -281,7 +292,12 @@ Symbol_ptr ParseVarDec(syntaxNode *cur, Type_ptr specifier_type)
     //    VarDec → ID | VarDec LB INT RB
     Symbol_ptr sym = new_symbol(region_depth);
     if(astcmp(cur->first_child,"ID")){
-        sym->name = cur->first_child->sval;
+        char* name = (char*)malloc(sizeof(char)*64);
+        strcpy(name,cur->first_child->sval);
+        if(region_in_structure){
+            strcat(name,structure_name);
+        }
+        sym->name = name;
         sym->type = specifier_type;
     }else{
         Type_ptr array_type = (Type_ptr)malloc(sizeof(Type));
@@ -320,7 +336,11 @@ Symbol_ptr ParseDecList(syntaxNode *cur, Type_ptr specifier_type)
     //    DecList → Dec | Dec COMMA DecList
     Symbol_ptr sym = ParseDec(cur->first_child,specifier_type);
     if(hash_insert(sym)==false){
-        logSTErrorf(3,cur->first_child->line,sym->name);
+        if(region_in_structure){
+            logSTErrorf(15,cur->first_child->line,sym->name);
+        }else{
+            logSTErrorf(3,cur->first_child->line,sym->name);
+        }
     }
     syntaxNode *comma=cur->first_child->next_sibling;
     if(comma){
