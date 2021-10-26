@@ -6,12 +6,12 @@
 Symbol_ptr hash_table[SYMBOL_SIZE];
 Symbol_ptr compst[COMPST_SIZE];
 
-// equal_type return true if t1 is equal to t2
+// equal_type return true if t1 is equal to t2. UNKNOWN only diff from INT & FLOAT
 bool equal_type(Type_ptr t1, Type_ptr t2) {
     if(t1->kind!=t2->kind){
         return (t1->kind==BASIC&&t1->u.basic==B_UNKNOWN)||(t2->kind==BASIC&&t2->u.basic==B_UNKNOWN);// duplicate error info
     }else if(t1->kind==BASIC){
-        return t1->u.basic==t2->u.basic;
+        return t1->u.basic==t2->u.basic||t1->u.basic==B_UNKNOWN||t2->u.basic==B_UNKNOWN;
     }else if(t1->kind==ARRAY){
         return equal_type(t1->u.array.elem,t2->u.array.elem);
     }else if(t1->kind==STRUCTURE){

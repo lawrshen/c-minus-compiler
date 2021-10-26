@@ -38,7 +38,7 @@ const STError SETable[] = {
 };
 
 #if COLORFUL
-const char* STerrorf="\033[31mError type %d\033[0m at Line %d: ";
+const char* STerrorf="\033[31mError type %d\033[0m at Line \033[31m%d\033[0m: ";
 #else
 const char* STerrorf="Error type %d at Line %d: ";
 #endif
@@ -179,7 +179,7 @@ void ParseStmt(syntaxNode *cur)
     // Stmt → RETURN Exp SEMI
     else if(astcmp(body,"RETURN")){
         Type_ptr t = ParseExp(body->next_sibling);
-        if(equal_type(t,region_func->type->u.function.ret)==false){
+        if(!(t->kind==BASIC&&t->u.basic==B_UNKNOWN)&&equal_type(t,region_func->type->u.function.ret)==false){
             logSTErrorf(8,body->line,NULL);
         }
     }
@@ -400,16 +400,17 @@ Type_ptr ParseExp(syntaxNode *cur)
               * e3=e2 ? e2->next_sibling:NULL;
     // Exp → LP Exp RP
     if(astcmp(e1,"LP")){
-        ParseExp(e2);
+        return ParseExp(e2);
     }
     // Exp → Exp LB Exp RB
     else if(e2&&astcmp(e2,"LB")){
         Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
         if(t1->kind!=ARRAY){
             logSTErrorf(10,e1->line,e1->first_child->sval);
+            return &UNKNOWN_TYPE;
         }
         if(equal_type(t2,&INT_TYPE)==false){
-            logSTErrorf(12,e1->line,e1->first_child->sval);
+            logSTErrorf(12,e1->line,e1->first_child->sval);// not int offset but array
         }
         return t1->u.array.elem;
     }
@@ -474,7 +475,9 @@ Type_ptr ParseExp(syntaxNode *cur)
     //    Exp → Exp ASSIGNOP Exp
     else if (e2&&astcmp(e2, "ASSIGNOP"))
     {
-        if(astcmp(e1->first_child,"INT")|| astcmp(e1->first_child,"FLOAT")){
+        if(!((e1->first_child->next_sibling==NULL&&astcmp(e1->first_child,"ID"))
+        || (e1->first_child->next_sibling&&astcmp(e1->first_child->next_sibling,"LB"))
+        || (e1->first_child->next_sibling&&astcmp(e1->first_child->next_sibling,"DOT")))){
             logSTErrorf(6,e1->line,NULL);
             return &UNKNOWN_TYPE;
         }
@@ -488,9 +491,6 @@ Type_ptr ParseExp(syntaxNode *cur)
     // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
     else if(e2&&e3&&astcmp(e3,"Exp")){
         Type_ptr t1 = ParseExp(e1), t2 = ParseExp(e3);
-        if(equal_type(t1,&UNKNOWN_TYPE)|| equal_type(t2,&UNKNOWN_TYPE)){
-            return &UNKNOWN_TYPE;
-        }
         if(astcmp(e2,"AND")||astcmp(e2,"OR")){
             if(!(equal_type(t1,t2)&& equal_type(t1,&INT_TYPE))){
                 logSTErrorf(7,e1->line,NULL);
@@ -502,10 +502,11 @@ Type_ptr ParseExp(syntaxNode *cur)
                 return &UNKNOWN_TYPE;
             }
         }
+        return t1;
     }
     // Exp → MINUS Exp | NOT Exp
     else if(e2&&astcmp(e2, "Exp")){
-        ParseExp(e2);
+        return ParseExp(e2);
     }
     return &UNKNOWN_TYPE;
 }

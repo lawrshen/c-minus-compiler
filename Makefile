@@ -11,7 +11,7 @@ color: lexical syntax
 	
 ast: lexical syntax
 	@$(CC) $(SRC_C) -D ASTREE -lfl -ly -o parser \
-	&& ./test.sh > zw.cmm
+	&& ./parser w.cmm > zw.cmm
 
 yydebug: lexical
 	@bison -dtv syntax.y
