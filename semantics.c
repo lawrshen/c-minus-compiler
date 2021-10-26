@@ -500,6 +500,8 @@ Type_ptr ParseExp(syntaxNode *cur)
             if( !(equal_type(t1,t2)&&(equal_type(t1,&INT_TYPE)|| equal_type(t1,&FLOAT_TYPE))) ){
                 logSTErrorf(7,e1->line,NULL);
                 return &UNKNOWN_TYPE;
+            }else if(astcmp(e2,"RELOP")){
+                return &INT_TYPE;
             }
         }
         return t1;

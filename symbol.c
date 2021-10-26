@@ -15,7 +15,17 @@ bool equal_type(Type_ptr t1, Type_ptr t2) {
     }else if(t1->kind==ARRAY){
         return equal_type(t1->u.array.elem,t2->u.array.elem);
     }else if(t1->kind==STRUCTURE){
-        return strcmp(t1->u.structure->name,t2->u.structure->name)==0; // Name equivalence
+        if(strcmp(t1->u.structure->name,t2->u.structure->name)==0){// Name equivalence
+            return true;
+        } else{
+            Symbol_ptr p1,p2;
+            for(p1=t1->u.structure,p2=t2->u.structure;p1&&p2;p1=p1->cross_nxt,p2=p2->cross_nxt){
+                if(equal_type(p1->type,p2->type)==false){
+                    return false;
+                }
+            }
+            return (p1==NULL)&&(p2==NULL);
+        }
     }else if(t1->kind==FUNCTION){
         if(!(t1->u.function.params_num==t2->u.function.params_num&&
            equal_type(t1->u.function.ret,t2->u.function.ret))){
