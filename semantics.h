@@ -36,6 +36,7 @@ typedef struct STError {
 
 void logSTErrorf(enum SemanticErrors id, int line, const char *name);
 
+void declare_check();
 void semanticScan();
 void checkSemantics(syntaxNode *node, syntaxNode *parent);
 
@@ -55,7 +56,7 @@ Type_ptr ParseSpecifier(syntaxNode* cur);
 Type_ptr ParseStructSpecifier(syntaxNode* cur);
 
 /*** Declarators ***/
-Symbol_ptr ParseFunDec(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseFunDec(syntaxNode* cur, Type_ptr specifier_type,bool is_declare);
 Symbol_ptr ParseVarList(syntaxNode* cur, Symbol_ptr func);
 Symbol_ptr ParseParamDec(syntaxNode* cur);
 Symbol_ptr ParseVarDec(syntaxNode* cur, Type_ptr specifier_type);

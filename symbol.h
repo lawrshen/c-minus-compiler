@@ -5,7 +5,7 @@
 
 #define SYMBOL_SIZE 0x3fff
 #define COMPST_SIZE 0xff
-#define CLAIM_SIZE 0xff
+#define DECLARE_SIZE 0xff
 
 typedef enum _BASIC_TYPE { B_UNKNOWN, B_INT, B_FLOAT } BASIC_TYPE;
 typedef struct _Type* Type_ptr;
@@ -27,6 +27,8 @@ typedef struct _Type {
             Type_ptr ret;
             int params_num;
             Symbol_ptr params;
+            bool is_declare,is_defed;
+            int declare_lineno;
         } function;
     } u;
 } Type;

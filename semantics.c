@@ -14,6 +14,9 @@ bool region_in_structure = false;
 char* structure_name = NULL;
 int region_depth = 0;
 Symbol_ptr region_func=NULL;
+// declare list
+Symbol_ptr declare_list[DECLARE_SIZE];
+int total_declare=0;
 const STError SETable[] = {
   {  0, "Pseudo error", "" },
   {  1, "Use of undefined variable ", "" },
@@ -54,6 +57,16 @@ void logSTErrorf(enum SemanticErrors id, int line, const char *name) {
   fprintf(stderr, ".\n");
 }
 
+void declare_insert(Symbol_ptr func_node) {
+    declare_list[total_declare++] = func_node;
+}
+void declare_check() {
+    for (int i = 0; i < total_declare; i++) {
+        if (declare_list[i]->type->u.function.is_declare) {
+            logSTErrorf(18,declare_list[i]->type->u.function.declare_lineno,declare_list[i]->name);
+        }
+    }
+}
 // main entry of semantic scan
 void semanticScan()
 {
@@ -103,7 +116,7 @@ void ParseExtDef(syntaxNode *cur)
 {
     //    ExtDef → Specifier ExtDecList SEMI
     //    | Specifier SEMI
-    //    | Specifier FunDec CompSt
+    //    | Specifier FunDec CompSt | Specifier FunDec SEMI
     Type_ptr specifier = ParseSpecifier(cur->first_child);
     syntaxNode *body = cur->first_child->next_sibling;
     if (astcmp(body, "SEMI")){
@@ -114,14 +127,32 @@ void ParseExtDef(syntaxNode *cur)
     }
     else if (astcmp(body, "FunDec"))
     {
-        Symbol_ptr sym = ParseFunDec(body, specifier);
-        // error 4
-        if(hash_insert(sym)==false){
-            logSTErrorf(4,cur->first_child->line,sym->name);
+        // error 4 Redefinition of function
+        if(astcmp(body->next_sibling,"CompSt")){
+            Symbol_ptr dec_sym = hash_find(body->first_child->sval),
+                           sym = ParseFunDec(body, specifier,false);
+            if((dec_sym==NULL&&hash_insert(sym)==false)||dec_sym&&dec_sym->type->u.function.is_defed){ //undec but def double || dec and def double
+                logSTErrorf(4,cur->first_child->line,sym->name);
+                return;
+            }else if(dec_sym&&equal_type(sym->type,dec_sym->type)==false){
+                logSTErrorf(19,cur->first_child->line,body->first_child->sval);
+                return;
+            }else if(dec_sym){
+                dec_sym->type->u.function.is_declare=false;
+                dec_sym->type->u.function.is_defed=true;
+            }
+            region_func = sym; //judge RETURN
+            ParseCompSt(body->next_sibling);
+            region_func = NULL;
+        }else{
+            Symbol_ptr sym = ParseFunDec(body, specifier,true);
+            if(hash_insert(sym)==false){
+                Symbol_ptr dec_sym = hash_find(body->first_child->sval);
+                if(equal_type(sym->type,dec_sym->type)==false){
+                    logSTErrorf(19,cur->first_child->line,body->first_child->sval);
+                }
+            }
         }
-        region_func = sym;
-        ParseCompSt(body->next_sibling);
-        region_func = NULL;
     }
 }
 
@@ -270,7 +301,7 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
     }
 }
 
-Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
+Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type, bool is_declare)
 {
     //    FunDec → ID LP VarList RP | ID LP RP
     Symbol_ptr sym = new_symbol(region_depth);
@@ -278,18 +309,29 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type)
     sym->type = (Type_ptr)malloc(sizeof(Type));
     sym->type->kind = FUNCTION;
     sym->type->u.function.ret = specifier_type;
+    sym->type->u.function.is_declare=is_declare;
+    sym->type->u.function.declare_lineno=cur->first_child->line;
     syntaxNode *body = cur->first_child->next_sibling->next_sibling;
     if (astcmp(body, "RP"))
     {
         sym->type->u.function.params_num = 0;
+        sym->type->u.function.params = NULL;
     }
     else
     {
         sym->type->u.function.params = ParseVarList(body, sym);
+    }
+    if(hash_find(sym->name)==NULL){ //first declare or def
         for(Symbol_ptr p=sym->type->u.function.params;p;p=p->cross_nxt){
             if(hash_insert(p)==false){
-                logSTErrorf(3,cur->first_child->line,sym->name);
+                logSTErrorf(3,cur->first_child->line,p->name);
             }
+        }
+        if(is_declare){
+            sym->type->u.function.is_defed=false;
+            declare_insert(sym);
+        }else{
+            sym->type->u.function.is_defed=true;
         }
     }
     return sym;
