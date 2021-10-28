@@ -6,6 +6,24 @@
 Symbol_ptr hash_table[SYMBOL_SIZE];
 Symbol_ptr compst[COMPST_SIZE];
 
+void compst_insert(Symbol_ptr node){
+    if(compst[node->region]==NULL){
+        compst[node->region]=node;
+    }else{
+        node->compst_nxt=compst[node->region];
+        compst[node->region]=node;
+    }
+}
+
+void compst_destroy(int depth) {
+    for(Symbol_ptr p=compst[depth];p;p=p->compst_nxt){
+        if(p->is_global==false){
+            p->is_activate = false;
+        }
+    }
+    compst[depth]=NULL;
+}
+
 // equal_type return true if t1 is equal to t2. UNKNOWN only diff from INT & FLOAT
 bool equal_type(Type_ptr t1, Type_ptr t2) {
     if(t1->kind!=t2->kind){
@@ -52,7 +70,9 @@ unsigned int hash_pjw(char* name) {
 
 // hash_cmp return 0 if node_new is equal to node_old in hash slot
 int hash_cmp(Symbol_ptr node_new, Symbol_ptr node_old) {
-    if (strcmp(node_new->name, node_old->name) == 0) {
+    bool activate = (node_new->region <= node_old->region && node_old->is_activate) // new symbol region higher than old (eg. 0 > 1)
+                ||node_old->is_global||node_new->is_global; 
+    if (activate&&strcmp(node_new->name, node_old->name) == 0) {
         switch (node_new->type->kind) {
             case FUNCTION:
                 if (node_old->type->kind == FUNCTION) return 0;
@@ -70,6 +90,8 @@ Symbol_ptr new_symbol(int region) {
     sym->type = NULL;
     sym->nxt  = sym->cross_nxt = sym->compst_nxt = NULL;
     sym->region = region;
+    sym->is_activate = true;
+    sym->is_global = false;
     return sym;
 }
 
@@ -100,7 +122,7 @@ bool hash_insert(Symbol_ptr node) {
         } 
         cur->nxt = node;
     }
-//    compst_insert(node);
+   compst_insert(node);
     return true;
 }
 
@@ -108,16 +130,14 @@ Symbol_ptr hash_find(char* name) {
     unsigned int idx = hash_pjw(name);
     Symbol_ptr cur = hash_table[idx], opt = NULL;
     while (cur) {
-        if (strcmp(name, cur->name) == 0) {
+        if (cur->is_activate&&strcmp(name, cur->name) == 0) {
+            if (!opt || opt->region < cur->region){
                 opt = cur;
+            }
         }
         cur = cur->nxt;
     }
     return opt;
-}
-
-void compst_destroy(int depth) {
-
 }
 
 //info

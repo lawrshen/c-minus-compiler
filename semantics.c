@@ -272,6 +272,10 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
         Symbol_ptr sym = hash_find(tag->first_child->sval);
         if(sym == NULL){
             logSTErrorf(17,tag->line,tag->first_child->sval);
+            Type_ptr t=(Type_ptr)malloc(sizeof(Type));
+            t->kind=STRUCTURE;
+            t->u.structure=NULL;
+            return t;
         }else{
             return sym->type;
         }
@@ -286,6 +290,7 @@ Type_ptr ParseStructSpecifier(syntaxNode *cur)
         sym->name=name;
         sym->type = (Type_ptr)malloc(sizeof(Type));
         sym->type->kind=STRUCTURE;
+        sym->is_global=true;
         region_depth++;
         structure_name = name;
         region_in_structure = true;
@@ -319,7 +324,9 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type, bool is_declare
     }
     else
     {
+        region_depth++;
         sym->type->u.function.params = ParseVarList(body, sym);
+        region_depth--;
     }
     if(hash_find(sym->name)==NULL){ //first declare or def
         for(Symbol_ptr p=sym->type->u.function.params;p;p=p->cross_nxt){
