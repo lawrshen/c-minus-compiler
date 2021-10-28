@@ -1,5 +1,4 @@
 #include "semantics.h"
-#include "syntax.tab.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,7 +7,6 @@
 #define astcmp(node, str) \
     (strcmp(node->name, str) == 0)
 
-extern syntaxNode *stroot;
 int anonymous = 0; // anonymous structure counter
 bool region_in_structure = false;
 char* structure_name = NULL;
@@ -19,12 +17,12 @@ Symbol_ptr declare_list[DECLARE_SIZE];
 int total_declare=0;
 const STError SETable[] = {
   {  0, "Pseudo error", "" },
-  {  1, "Use of undefined variable ", "" },
-  {  2, "Use of undefined function ", "" },
-  {  3, "Duplicated name ", " of variables" },
-  {  4, "Redefinition of function ", "" },
+  {  1, "Undefined variable ", "" },
+  {  2, "Undefined function ", "" },
+  {  3, "Redefined variable ", "" },
+  {  4, "Redefined function ", "" },
   {  5, "Type mismatched for assignment", "" },
-  {  6, "Cannot assign to rvalue", "" },
+  {  6, "The left-hand side of an assignment must be a varia-ble", "" },
   {  7, "Type mismatched for operands", "" },
   {  8, "Type mismatched for return" },
   {  9, "Arguments mismatched for function ", "" },
@@ -65,25 +63,6 @@ void declare_check() {
         if (declare_list[i]->type->u.function.is_declare) {
             logSTErrorf(18,declare_list[i]->type->u.function.declare_lineno,declare_list[i]->name);
         }
-    }
-}
-// main entry of semantic scan
-void semanticScan()
-{
-    checkSemantics(stroot, stroot);
-}
-
-void checkSemantics(syntaxNode *node, syntaxNode *parent)
-{
-    if (node->empty)
-        return;
-    if (node->token == ID)
-    {
-        printf("%s %s:%s\n", parent->name, node->name, node->sval);
-    }
-    for (syntaxNode *child = node->first_child; child != NULL; child = child->next_sibling)
-    {
-        checkSemantics(child, node);
     }
 }
 

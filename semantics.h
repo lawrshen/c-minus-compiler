@@ -37,8 +37,6 @@ typedef struct STError {
 void logSTErrorf(enum SemanticErrors id, int line, const char *name);
 
 void declare_check();
-void semanticScan();
-void checkSemantics(syntaxNode *node, syntaxNode *parent);
 
 /*** High-Level Definitions ***/
 void ParseProgram(syntaxNode* cur);

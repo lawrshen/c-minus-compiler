@@ -58,6 +58,4 @@ Symbol_ptr hash_find(char* name);
 // Compst
 void compst_destroy(int depth);
 
-void _hash_print_all_symbols();
-
 #endif

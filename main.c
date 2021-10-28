@@ -49,10 +49,8 @@ int main(int argc, char **argv)
         printSyntaxTree();
 #endif
     // Lab 2: conduct a full semantic scan.
-//    semanticScan();
         ParseProgram(stroot);
         declare_check();
-//    _hash_print_all_symbols();
     }
 
     return 0;
