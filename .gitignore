@@ -9,3 +9,5 @@ parser
 output/
 Test*
 *.sh
+*.py
+utils/

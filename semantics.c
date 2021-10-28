@@ -133,7 +133,6 @@ void ParseExtDef(syntaxNode *cur)
                            sym = ParseFunDec(body, specifier,false);
             if((dec_sym==NULL&&hash_insert(sym)==false)||dec_sym&&dec_sym->type->u.function.is_defed){ //undec but def double || dec and def double
                 logSTErrorf(4,cur->first_child->line,sym->name);
-                return;
             }else if(dec_sym&&equal_type(sym->type,dec_sym->type)==false){
                 logSTErrorf(19,cur->first_child->line,body->first_child->sval);
                 return;
@@ -340,6 +339,12 @@ Symbol_ptr ParseFunDec(syntaxNode *cur, Type_ptr specifier_type, bool is_declare
         }else{
             sym->type->u.function.is_defed=true;
         }
+    }else{
+        for(Symbol_ptr p=sym->type->u.function.params;p;p=p->cross_nxt){
+            if(hash_find(p->name)==NULL){
+                hash_insert(p);
+            }
+        }
     }
     return sym;
 }
@@ -434,11 +439,11 @@ Symbol_ptr ParseDec(syntaxNode *cur, Type_ptr specifier_type)
     //    Dec → VarDec | VarDec ASSIGNOP Exp
     Symbol_ptr sym = ParseVarDec(cur->first_child,specifier_type);
     syntaxNode *assignop=cur->first_child->next_sibling;
-    if(assignop&&equal_type(sym->type,ParseExp(assignop->next_sibling))==false){
-        logSTErrorf(5,cur->first_child->line,cur->first_child->sval);
-    }else if(assignop&&region_in_structure){
+    if(assignop&&region_in_structure){
         logSTErrorf(15,cur->first_child->line,cur->first_child->first_child->sval);
-    }
+    }else if(assignop&&equal_type(sym->type,ParseExp(assignop->next_sibling))==false){
+        logSTErrorf(5,cur->first_child->line,cur->first_child->sval);
+    } 
     return sym;
 }
 
