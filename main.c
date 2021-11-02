@@ -44,13 +44,14 @@ int main(int argc, char **argv)
     // Lab 1: call yyparse to get syntax tree.
     yyparse();
 
-    // if(!AError&&!BError)
-        // printSyntaxTree();
-    
+    if(!AError&&!BError){
+#if ASTREE
+        printSyntaxTree();
+#endif
     // Lab 2: conduct a full semantic scan.
-    semanticScan();
-    ParseProgram(stroot);
-    _hash_print_all_symbols();
+        ParseProgram(stroot);
+        declare_check();
+    }
 
     return 0;
 }

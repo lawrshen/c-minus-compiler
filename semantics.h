@@ -36,8 +36,7 @@ typedef struct STError {
 
 void logSTErrorf(enum SemanticErrors id, int line, const char *name);
 
-void semanticScan();
-void checkSemantics(syntaxNode *node, syntaxNode *parent);
+void declare_check();
 
 /*** High-Level Definitions ***/
 void ParseProgram(syntaxNode* cur);
@@ -45,12 +44,17 @@ void ParseExtDefList(syntaxNode* cur);
 void ParseExtDef(syntaxNode* cur);
 void ParseExtDecList(syntaxNode* cur, Type_ptr specifier_type);
 
+/*** Statments ***/
+void ParseCompSt(syntaxNode* cur);
+void ParseStmtList(syntaxNode* cur);
+void ParseStmt(syntaxNode* cur);
+
 /*** Specifiers ***/
 Type_ptr ParseSpecifier(syntaxNode* cur);
 Type_ptr ParseStructSpecifier(syntaxNode* cur);
 
 /*** Declarators ***/
-Symbol_ptr ParseFunDec(syntaxNode* cur, Type_ptr specifier_type);
+Symbol_ptr ParseFunDec(syntaxNode* cur, Type_ptr specifier_type,bool is_declare);
 Symbol_ptr ParseVarList(syntaxNode* cur, Symbol_ptr func);
 Symbol_ptr ParseParamDec(syntaxNode* cur);
 Symbol_ptr ParseVarDec(syntaxNode* cur, Type_ptr specifier_type);
@@ -61,12 +65,8 @@ Symbol_ptr ParseDef(syntaxNode* cur);
 Symbol_ptr ParseDecList(syntaxNode* cur, Type_ptr specifier_type);
 Symbol_ptr ParseDec(syntaxNode* cur, Type_ptr specifier_type);
 
-/*** Statments ***/
-void ParseCompSt(syntaxNode* cur);
-void ParseStmtList(syntaxNode* cur);
-void ParseStmt(syntaxNode* cur);
-
 /*** Expression ***/
 Type_ptr ParseExp(syntaxNode* cur);
+Symbol_ptr ParseArgs(syntaxNode* cur,int* num);
 
 #endif // SEMANTIC_H

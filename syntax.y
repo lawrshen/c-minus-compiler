@@ -54,6 +54,7 @@ ExtDefList: ExtDef ExtDefList   {$$.st_node = newNode("ExtDefList",2,@1.first_li
 ExtDef: Specifier ExtDecList SEMI    {$$.st_node = newNode("ExtDef",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
     | Specifier SEMI                 {$$.st_node = newNode("ExtDef",2,@1.first_line,$1.st_node,$2.st_node);}
     | Specifier FunDec CompSt        {$$.st_node = newNode("ExtDef",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
+    | Specifier FunDec SEMI          {$$.st_node = newNode("ExtDef",3,@1.first_line,$1.st_node,$2.st_node,$3.st_node);}
     | error SEMI                  
     | error FunDec CompSt        
     | Specifier error CompSt    

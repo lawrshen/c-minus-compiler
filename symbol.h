@@ -5,10 +5,9 @@
 
 #define SYMBOL_SIZE 0x3fff
 #define COMPST_SIZE 0xff
-#define CLAIM_SIZE 0xff
+#define DECLARE_SIZE 0xff
 
 typedef enum _BASIC_TYPE { B_UNKNOWN, B_INT, B_FLOAT } BASIC_TYPE;
-typedef enum _SEARCH_TYPE {SEARCH_ALL, SEARCH_VARIABLE, SEARCH_FUNCTION, SEARCH_PROTO} SEARCH_TYPE;
 typedef struct _Type* Type_ptr;
 typedef struct _Symbol* Symbol_ptr;
 typedef struct _Type {
@@ -28,6 +27,8 @@ typedef struct _Type {
             Type_ptr ret;
             int params_num;
             Symbol_ptr params;
+            bool is_declare,is_defed;
+            int declare_lineno;
         } function;
     } u;
 } Type;
@@ -46,6 +47,7 @@ typedef struct _Symbol {
 	// compst_nxt: the next symbol in same block
     Symbol_ptr nxt, cross_nxt, compst_nxt;
     int region;
+    bool is_activate,is_global;
 } Symbol;
 
 Symbol_ptr new_symbol(int region);
@@ -55,7 +57,5 @@ bool hash_insert(Symbol_ptr node);
 Symbol_ptr hash_find(char* name);
 // Compst
 void compst_destroy(int depth);
-
-void _hash_print_all_symbols();
 
 #endif

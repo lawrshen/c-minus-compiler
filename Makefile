@@ -1,5 +1,6 @@
 CC = gcc
 SRC_C = main.c syntax.tab.c tree.c semantics.c symbol.c
+TEST_ARGS = A
 
 .PHONY: all debug lexical syntax clean test 
 
@@ -9,6 +10,10 @@ all: lexical syntax
 color: lexical syntax
 	@$(CC) $(SRC_C) -D COLORFUL -lfl -ly -o parser
 	
+ast: lexical syntax
+	@$(CC) $(SRC_C) -D ASTREE -lfl -ly -o parser \
+	&& ./parser w.cmm > zw.cmm
+
 yydebug: lexical
 	@bison -dtv syntax.y
 	@$(CC) $(SRC_C) -D YYDEBUG -lfl -ly -o parser
@@ -23,7 +28,7 @@ flex_level: lexical syntax
 	@gcc main.c syntax.tab.c tree.c -D DEBUGFLEX -D COLORFUL -lfl -ly -o parser
 
 test: all
-	@./test.sh
+	@./test.sh $(TEST_ARGS)
 
 clean:
 	rm lex.yy.c syntax.tab.* parser
