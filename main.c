@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "tree.h"
 #include "semantics.h"
+#include "ir.h"
 
 extern FILE *yyin;
 extern int yylex();
@@ -51,6 +52,8 @@ int main(int argc, char **argv)
     // Lab 2: conduct a full semantic scan.
         ParseProgram(stroot);
         declare_check();
+    // Lab 3: generate IR
+        outputInterCodes(stdout);
     }
 
     return 0;
