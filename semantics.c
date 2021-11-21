@@ -70,6 +70,7 @@ void declare_check() {
 void ParseProgram(syntaxNode *cur)
 {
     hash_create();
+    InitIO();
     //    Program → ExtDefList
     if (astcmp(cur->first_child, "ExtDefList"))
     {
@@ -557,3 +558,30 @@ Symbol_ptr ParseArgs(syntaxNode *cur,int* num) {
     }
     return sym;
 }
+
+void InitIO() {
+    // int read();
+    Symbol_ptr read_op = new_symbol(0);
+    read_op->name = "read";
+    read_op->type = (Type_ptr)malloc(sizeof(Type));
+    read_op->type->kind = FUNCTION;
+    read_op->type->u.function.ret = &INT_TYPE;
+    read_op->type->u.function.is_declare = false;
+    read_op->type->u.function.params_num = 0;
+    read_op->type->u.function.params = NULL;
+    hash_insert(read_op);
+    // int write(int);
+    Symbol_ptr write_op = new_symbol(0);
+    write_op->name = "write";
+    write_op->type = (Type_ptr)malloc(sizeof(Type));
+    write_op->type->kind = FUNCTION;
+    write_op->type->u.function.ret = &INT_TYPE;
+    write_op->type->u.function.is_declare = false;
+    write_op->type->u.function.params_num = 1;
+    Symbol_ptr write_param = new_symbol(0);
+    write_param->name = "#output_int";
+    write_param->type = &INT_TYPE;
+    write_op->type->u.function.params = write_param;
+    hash_insert(write_op);
+}
+

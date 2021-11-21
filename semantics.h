@@ -69,4 +69,7 @@ Symbol_ptr ParseDec(syntaxNode* cur, Type_ptr specifier_type);
 Type_ptr ParseExp(syntaxNode* cur);
 Symbol_ptr ParseArgs(syntaxNode* cur,int* num);
 
+// System level IO
+void InitIO();
+
 #endif // SEMANTIC_H
