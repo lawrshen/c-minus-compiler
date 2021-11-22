@@ -3,6 +3,10 @@
 
 #include<stdarg.h>
 #include<stdbool.h>
+#include <string.h>
+
+#define astcmp(node, str) \
+    (strcmp(node->name, str) == 0)
 
 typedef struct node{
     char name[32];

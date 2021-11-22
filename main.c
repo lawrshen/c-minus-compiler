@@ -2,6 +2,7 @@
 #include "tree.h"
 #include "semantics.h"
 #include "ir.h"
+#include "translate.h"
 
 extern FILE *yyin;
 extern int yylex();
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
         ParseProgram(stroot);
         declare_check();
     // Lab 3: generate IR
+        translate_Program(stroot);
         outputInterCodes(stdout);
     }
 

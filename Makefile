@@ -8,6 +8,9 @@ TEST_ARGS = A
 all: lexical syntax
 	@$(CC) $(SRC_C) -lfl -ly -o parser
 
+debug: lexical syntax
+	@$(CC) -g $(SRC_C) -lfl -ly -o parser
+
 color: lexical syntax
 	@$(CC) $(SRC_C) -D COLORFUL -lfl -ly -o parser
 	

@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define astcmp(node, str) \
-    (strcmp(node->name, str) == 0)
-
 int anonymous = 0; // anonymous structure counter
 bool region_in_structure = false;
 char* structure_name = NULL;

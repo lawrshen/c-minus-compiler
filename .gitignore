@@ -11,3 +11,5 @@ Test*
 *.sh
 *.py
 utils/
+*.ir
+irsim/

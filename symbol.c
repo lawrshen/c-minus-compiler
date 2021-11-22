@@ -1,7 +1,6 @@
 #include "symbol.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 Symbol_ptr hash_table[SYMBOL_SIZE];
 Symbol_ptr compst[COMPST_SIZE];
