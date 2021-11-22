@@ -36,7 +36,7 @@ void translate_DecList(syntaxNode* cur);
 void translate_Dec(syntaxNode* cur);
 
 /*** Expression ***/
-void translate_Exp(syntaxNode* cur);
+void translate_Exp(syntaxNode* cur, Operand place);
 
 #endif //LAB3_Translate_H
  

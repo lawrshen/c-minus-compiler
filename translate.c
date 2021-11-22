@@ -98,33 +98,33 @@ void translate_Stmt(syntaxNode* cur) {
     syntaxNode *body = cur->first_child;
     // Stmt → Exp SEMI
     if (astcmp(body, "Exp")) {
-        translate_Exp(body);
+//        translate_Exp(body);
     }
     // Stmt → CompSt
     else if(astcmp(body,"CompSt")){
         translate_CompSt(body);
     }
     // Stmt -> RETURN Exp SEMI
-    else if (astcmp(body, "RETURN")) {
-        translate_Exp(body->next_sibling);
-    }
-    // Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt
-    else if (astcmp(body,"IF")) {
-        syntaxNode* exp=body->next_sibling->next_sibling,
-                  * stmt=exp->next_sibling->next_sibling;
-        translate_Exp(exp);
-        translate_Stmt(stmt);
-        if(stmt->next_sibling){
-            translate_Stmt(stmt->next_sibling->next_sibling);
-        }
-    }
-    // Stmt → WHILE LP Exp RP Stmt
-    else if (astcmp(body,"WHILE")) {
-        syntaxNode* exp=body->next_sibling->next_sibling,
-                  * stmt=exp->next_sibling->next_sibling;
-        translate_Exp(exp);
-        translate_Stmt(stmt);
-    }
+   else if (astcmp(body, "RETURN")) {
+    //    translate_Exp(body->next_sibling);
+   }
+   // Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt
+   else if (astcmp(body,"IF")) {
+       syntaxNode* exp=body->next_sibling->next_sibling,
+                 * stmt=exp->next_sibling->next_sibling;
+    //    translate_Exp(exp);
+       translate_Stmt(stmt);
+       if(stmt->next_sibling){
+           translate_Stmt(stmt->next_sibling->next_sibling);
+       }
+   }
+   // Stmt → WHILE LP Exp RP Stmt
+   else if (astcmp(body,"WHILE")) {
+       syntaxNode* exp=body->next_sibling->next_sibling,
+                 * stmt=exp->next_sibling->next_sibling;
+    //    translate_Exp(exp);
+       translate_Stmt(stmt);
+   }
 }
 
 /*** Local Definitions ***/
@@ -156,27 +156,30 @@ void translate_Dec(syntaxNode* cur){
     translate_VarDec(cur->first_child);
     syntaxNode *assignop=cur->first_child->next_sibling;
     if(assignop){
-        translate_Exp(assignop->next_sibling);
+        Operand tmp = new_temp();
+        translate_Exp(assignop->next_sibling,tmp);
+        gen_ir_2(IR_ASSIGN, new_var(cur->first_child->first_child->sval), tmp);
+
     }
 }
 
 /*** Expression ***/
 
-void translate_Exp(syntaxNode* cur) {
+void translate_Exp(syntaxNode* cur, Operand place) {
     syntaxNode* e1=cur->first_child,
             * e2=e1 ? e1->next_sibling:NULL,
             * e3=e2 ? e2->next_sibling:NULL;
     // Exp → LP Exp RP
     if(astcmp(e1,"LP")){
-        translate_Exp(e2);
+//        translate_Exp(e2);
     }
     // Exp → Exp LB Exp RB
     else if(e2&&astcmp(e2,"LB")) {
-        translate_Exp(e1);
+//        translate_Exp(e1);
     }
     // Exp → Exp DOT ID
     else if(e2&&astcmp(e2,"DOT")){
-        translate_Exp(e1);
+//        translate_Exp(e1);
     }
     // Exp → ID LP Args RP | ID LP RP | ID
     else if (astcmp(e1, "ID")){
@@ -186,22 +189,23 @@ void translate_Exp(syntaxNode* cur) {
     }
     // Exp → INT | FLOAT
     else if(astcmp(e1,"INT")){
-
+        Operand op2 = new_int(e1->ival);
+        gen_ir_2(IR_ASSIGN,place,op2);
     } else if(astcmp(e1,"FLOAT")){
 
     }
-    // Exp → Exp ASSIGNOP Exp
+// Exp → Exp ASSIGNOP Exp
     else if (e2&&astcmp(e2, "ASSIGNOP")){
-        translate_Exp(e1);
-        translate_Exp(e3);
+//        translate_Exp(e1);
+//        translate_Exp(e3);
     }
     // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
     else if (e2&&e3&&astcmp(e3,"Exp")) {
-        translate_Exp(e1);
-        translate_Exp(e3);
+//        translate_Exp(e1);
+//        translate_Exp(e3);
     }
     // Exp → MINUS Exp | NOT Exp
     else if(e2&&astcmp(e2, "Exp")) {
-        translate_Exp(e2);
+//        translate_Exp(e2);
     }
 }
