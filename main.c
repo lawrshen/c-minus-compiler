@@ -55,7 +55,12 @@ int main(int argc, char **argv)
         declare_check();
     // Lab 3: generate IR
         translate_Program(stroot);
-        outputInterCodes(stdout);
+        if(argc==3){
+            FILE *ir = fopen(argv[2], "w");
+            outputInterCodes(ir);
+        }else{
+            outputInterCodes(stdout);
+        }
     }
 
     return 0;

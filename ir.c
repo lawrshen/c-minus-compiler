@@ -26,41 +26,31 @@ void insertInterCode(InterCode ic){
     }
 }
 
-void output_op(Operand op, FILE *fp) {
-    switch (op->kind) {
-        case OP_LABEL:
-            fprintf(fp,"LABEL %d :",op->u.label_no);
-            break;
-        case OP_CONSTANT:
-            fprintf(fp, "#%d", op->u.value);
-            break;
-        default:
-            break;
-    }
-}
-
-size_t output_operandf(char *s, Operand op) {
-    switch (op->kind) {
+size_t output_operandf(char *s, Operand op){
+    switch (op->kind)   {
         case OP_TEMP:
             return sprintf(s, "t%u", op->u.temp_no);
         case OP_LABEL:
             return sprintf(s, "label%u", op->u.label_no);
-        case OP_VARIABLE:
+        case OP_VAR:
             return sprintf(s, "%s", op->u.var_name);
-        case OP_CONSTANT:
+        case OP_CONST:
             return sprintf(s, "#%d", op->u.value);
-        case OP_FUNCTION:
+        case OP_RELOP:
+            return sprintf(s, "%s", op->u.relop);
+        case OP_FUNC:
             return sprintf(s, "%s", op->u.func_name);
         default:
             return sprintf(s, "(NULL)");
     }
 }
+
 // Parse and output a line of IR code to file.
 static char ir_buffer[4096] = {};
 void output_intercode(InterCode ic,FILE* fp){
     char* s=ir_buffer;
     switch(ic->kind){
-        case IR_LABEL: 
+        case IR_LABEL:
             s += sprintf(s, "LABEL ");
             s += output_operandf(s, ic->u.label.label);
             s += sprintf(s, " :");
@@ -74,7 +64,76 @@ void output_intercode(InterCode ic,FILE* fp){
             s += output_operandf(s, ic->u.assign.left);
             s += sprintf(s, " := ");
             s += output_operandf(s, ic->u.assign.right);
+            break;
+        case IR_ADD:
+        case IR_SUB:
+        case IR_MUL:
+        case IR_DIV:{
+            char op = ' ';
+            switch (ic->kind) {
+                case IR_ADD:
+                    op = '+';
+                    break;
+                case IR_SUB:
+                    op = '-';
+                    break;
+                case IR_MUL:
+                    op = '*';
+                    break;
+                case IR_DIV:
+                    op = '/';
+                    break;
+                default:
+                    break;
+            }
+            s += output_operandf(s, ic->u.binop.result);
+            s += sprintf(s, " := ");
+            s += output_operandf(s, ic->u.binop.op1);
+            s += sprintf(s, " %c ", op);
+            s += output_operandf(s, ic->u.binop.op2);
+            break;
+        }
+        case IR_RET:
+            s += sprintf(s, "RETURN ");
+            s += output_operandf(s,ic->u.ret.var);
+            break;
+          case IR_GOTO: 
+            s += sprintf(s, "GOTO ");
+            s += output_operandf(s, ic->u.jump.dest);
+            break;
+        case IR_JUMP_COND: 
+            s += sprintf(s, "IF ");
+            s += output_operandf(s, ic->u.jump_cond.op1);
+            s += sprintf(s, " ");
+            s += output_operandf(s, ic->u.jump_cond.relop);
+            s += sprintf(s, " ");
+            s += output_operandf(s, ic->u.jump_cond.op2);
+            s += sprintf(s, " GOTO ");
+            s += output_operandf(s, ic->u.jump_cond.dest);
+            break;
+        case IR_READ:
+            s += sprintf(s, "READ ");
+            s += output_operandf(s,ic->u.read.var);
+            break;
+        case IR_WRITE:
+            s += sprintf(s, "WRITE ");
+            s += output_operandf(s,ic->u.write.var);
+            break;
+        case IR_PARAM:
+            s += sprintf(s, "PARAM ");
+            s += output_operandf(s,ic->u.param.var);
+            break;
+        case IR_ARG:
+            s += sprintf(s, "ARG ");
+            s += output_operandf(s,ic->u.arg.var);
+            break;
+        case IR_CALL:
+            s += output_operandf(s,ic->u.call.left);
+            s += sprintf(s, " := CALL ");
+            s += output_operandf(s,ic->u.call.right);
+            break;
         default:
+            s += sprintf(s, "TODO! ");
             break;
     }
     fprintf(fp, "%s\n", ir_buffer);
@@ -98,6 +157,18 @@ void gen_ir_1(IR_TYPE type, Operand op1) {
             ic->u.label.label=op1;break;
         case IR_FUNC:
             ic->u.function.function=op1;break;
+        case IR_GOTO:
+            ic->u.jump.dest=op1;break;
+        case IR_RET:
+            ic->u.ret.var=op1;break;
+        case IR_ARG:
+            ic->u.arg.var=op1;break;
+        case IR_PARAM:
+            ic->u.param.var=op1;break;
+        case IR_READ:
+            ic->u.read.var=op1;break;
+        case IR_WRITE:
+            ic->u.write.var=op1;break;
         default:break;
     }
     insertInterCode(ic);
@@ -113,6 +184,30 @@ void gen_ir_2(IR_TYPE type, Operand op1, Operand op2) {
             ic->u.call.left=op1,ic->u.call.right=op2;break;
         default:break;
     }
+    insertInterCode(ic);
+}
+
+void gen_ir_3(IR_TYPE type, Operand op1, Operand op2, Operand op3) {
+    InterCode ic = (InterCode)malloc(sizeof(struct InterCode_));
+    ic->kind=type;
+    switch(type){
+        case IR_ADD:
+        case IR_SUB:
+        case IR_MUL:
+        case IR_DIV:
+            ic->u.binop.result=op1,ic->u.binop.op1=op2,ic->u.binop.op2=op3;break;
+        default:break;
+    }
+    insertInterCode(ic);
+}
+
+void gen_ir_if(char *relop, Operand op1, Operand op2, Operand op3) {
+    InterCode ic = (InterCode)malloc(sizeof(struct InterCode_));
+    ic->kind= IR_JUMP_COND;
+    ic->u.jump_cond.op1=op1;
+    ic->u.jump_cond.op2=op2;
+    ic->u.jump_cond.dest=op3;
+    ic->u.jump_cond.relop=new_relop(relop);
     insertInterCode(ic);
 }
 
@@ -136,28 +231,35 @@ Operand new_temp() {
 
 Operand new_var(char* sval){
     Operand tmp = (Operand)malloc(sizeof(struct Operand_));
-    tmp->kind = OP_VARIABLE;
+    tmp->kind = OP_VAR;
     strcpy(tmp->u.var_name, sval);
     return tmp;
 }
 
 Operand new_const(char* val) {
     Operand tmp = (Operand)malloc(sizeof(struct Operand_));
-    tmp->kind = OP_CONSTANT;
+    tmp->kind = OP_CONST;
     tmp->u.value = atoi(val);
     return tmp;
 }
 
 Operand new_int(int val) {
     Operand tmp = (Operand)malloc(sizeof(struct Operand_));
-    tmp->kind = OP_CONSTANT;
+    tmp->kind = OP_CONST;
     tmp->u.value = val;
     return tmp;
 }
 
 Operand new_func(char* val) {
     Operand tmp = (Operand)malloc(sizeof(struct Operand_));
-    tmp->kind = OP_FUNCTION;
+    tmp->kind = OP_FUNC;
     strcpy(tmp->u.func_name, val);
+    return tmp;
+}
+
+Operand new_relop(char* relop){
+    Operand tmp = (Operand)malloc(sizeof(struct Operand_));
+    tmp->kind = OP_RELOP;
+    strcpy(tmp->u.relop, relop);
     return tmp;
 }

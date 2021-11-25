@@ -20,8 +20,6 @@ void translate_ExtDef(syntaxNode* cur);
 
 /*** Declarators ***/
 void translate_FunDec(syntaxNode* cur);
-void translate_VarList(syntaxNode* cur);
-void translate_ParamDec(syntaxNode* cur);
 void translate_VarDec(syntaxNode* cur);
 
 /*** Statments ***/
@@ -37,6 +35,8 @@ void translate_Dec(syntaxNode* cur);
 
 /*** Expression ***/
 void translate_Exp(syntaxNode* cur, Operand place);
+void translate_Args(syntaxNode* cur);
+void translate_Cond(syntaxNode* cur,Operand label_true,Operand label_false);
 
 #endif //LAB3_Translate_H
  

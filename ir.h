@@ -16,12 +16,11 @@ typedef enum OP_TYPE_ {
     OP_NULL,
     OP_TEMP,
     OP_LABEL,
-    OP_VARIABLE,
-    OP_VADDRESS,
-    OP_MEMBLOCK,
-    OP_CONSTANT,
+    OP_VAR,
+    OP_ADDR,
+    OP_CONST,
     OP_RELOP,
-    OP_FUNCTION,
+    OP_FUNC,
 } OP_TYPE;
 
 typedef struct Operand_* Operand;
@@ -31,14 +30,17 @@ struct Operand_ {
         int value;                          // OP_CONSTANT
         int temp_no,label_no;               // OP_TEMP,OP_LABEL
         char func_name[64],var_name[64];    // OP_FUNC,OP_VARIABLE
+        char relop[64];
     } u;
 };
 
 Operand new_label();
 Operand new_temp();
 Operand new_var(char* sval);
+Operand new_const(char* val);
 Operand new_int(int val);
 Operand new_func(char* val);
+Operand new_relop(char* relop);
 
 typedef enum IR_TYPE_ {
     IR_LABEL,
@@ -48,11 +50,10 @@ typedef enum IR_TYPE_ {
     IR_SUB,
     IR_MUL,
     IR_DIV,
-    IR_GET_ADDR,
-    IR_GET_VAL,
-    IR_ASSIGN_ADDR,
+    IR_LOAD,
+    IR_SAVE,
     IR_GOTO,
-    IR_RELOP,
+    IR_JUMP_COND,
     IR_RET,
     IR_DEC,
     IR_ARG,

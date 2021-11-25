@@ -37,6 +37,7 @@ void translate_ExtDef(syntaxNode* cur) {
     // ExtDef -> Specifier FunDec CompSt
     syntaxNode *body = cur->first_child->next_sibling;
     if (astcmp(body, "FunDec") && astcmp(body->next_sibling, "CompSt")) {
+        translate_FunDec(body);
         translate_CompSt(body->next_sibling);
     }
     // ExtDef -> Specifier FunDec SEMI
@@ -48,25 +49,19 @@ void translate_ExtDef(syntaxNode* cur) {
 void translate_FunDec(syntaxNode* cur) {
     // FunDec -> ID LP RP
     // FunDec -> ID LP VarList RP
-    syntaxNode *body = cur->first_child->next_sibling->next_sibling;
-    if (astcmp(body, "VarList")) {
-        translate_VarList(body);
+    gen_ir_1(IR_FUNC,new_func(cur->first_child->sval));
+    syntaxNode *varlist = cur->first_child->next_sibling->next_sibling;
+    if (astcmp(varlist, "VarList")) {
+        while(1){
+            syntaxNode* paramdec=varlist->first_child;
+            gen_ir_1(IR_PARAM,new_var(paramdec->first_child->next_sibling->first_child->sval));
+            if(paramdec->next_sibling){
+                varlist=paramdec->next_sibling->next_sibling;
+            }else{
+                break;
+            }
+        }
     }
-}
-
-void translate_VarList(syntaxNode* cur) {
-    translate_ParamDec(cur->first_child);
-    // VarList -> ParamDec COMMA VarList
-    syntaxNode *comma=cur->first_child->next_sibling;
-    if(comma){
-        translate_VarList(comma->next_sibling);
-    }
-    // VarList -> ParamDec
-}
-
-void translate_ParamDec(syntaxNode* cur) {
-    //    ParamDec → Specifier VarDec
-    translate_VarDec(cur->first_child->next_sibling);
 }
 
 void translate_VarDec(syntaxNode *cur) {
@@ -98,7 +93,7 @@ void translate_Stmt(syntaxNode* cur) {
     syntaxNode *body = cur->first_child;
     // Stmt → Exp SEMI
     if (astcmp(body, "Exp")) {
-//        translate_Exp(body);
+        translate_Exp(body,NULL);
     }
     // Stmt → CompSt
     else if(astcmp(body,"CompSt")){
@@ -106,24 +101,38 @@ void translate_Stmt(syntaxNode* cur) {
     }
     // Stmt -> RETURN Exp SEMI
    else if (astcmp(body, "RETURN")) {
-    //    translate_Exp(body->next_sibling);
+        Operand ret = new_temp();
+        translate_Exp(body->next_sibling,ret);
+        gen_ir_1(IR_RET,ret);
    }
    // Stmt → IF LP Exp RP Stmt | IF LP Exp RP Stmt ELSE Stmt
    else if (astcmp(body,"IF")) {
        syntaxNode* exp=body->next_sibling->next_sibling,
                  * stmt=exp->next_sibling->next_sibling;
-    //    translate_Exp(exp);
+       Operand l1=new_label(),l2=new_label(),l3=new_label();
+       translate_Cond(exp,l1,l2);
+       gen_ir_1(IR_LABEL,l1);
        translate_Stmt(stmt);
        if(stmt->next_sibling){
+           gen_ir_1(IR_GOTO,l3);
+       }
+       gen_ir_1(IR_LABEL,l2);
+       if(stmt->next_sibling){
            translate_Stmt(stmt->next_sibling->next_sibling);
+           gen_ir_1(IR_LABEL,l3);
        }
    }
    // Stmt → WHILE LP Exp RP Stmt
    else if (astcmp(body,"WHILE")) {
        syntaxNode* exp=body->next_sibling->next_sibling,
                  * stmt=exp->next_sibling->next_sibling;
-    //    translate_Exp(exp);
-       translate_Stmt(stmt);
+       Operand l1=new_label(),l2=new_label(),l3=new_label();
+       gen_ir_1(IR_LABEL,l1);
+        translate_Cond(exp,l2,l3);
+        gen_ir_1(IR_LABEL,l2);
+        translate_Stmt(stmt);
+        gen_ir_1(IR_GOTO,l1);
+        gen_ir_1(IR_LABEL,l3);
    }
 }
 
@@ -159,7 +168,6 @@ void translate_Dec(syntaxNode* cur){
         Operand tmp = new_temp();
         translate_Exp(assignop->next_sibling,tmp);
         gen_ir_2(IR_ASSIGN, new_var(cur->first_child->first_child->sval), tmp);
-
     }
 }
 
@@ -183,8 +191,26 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     }
     // Exp → ID LP Args RP | ID LP RP | ID
     else if (astcmp(e1, "ID")){
-        if(e2==NULL){//ID
-
+        // System IO
+        if(e2==NULL){
+            gen_ir_2(IR_ASSIGN,place, new_var(e1->sval));// #todo opt
+        }else if(astcmp(e3,"RP")){
+            if(strcmp(e1->sval,"read")==0){
+                gen_ir_1(IR_READ,place);
+            }else{
+                gen_ir_2(IR_CALL,place, new_func(e1->sval));
+            }
+        }else{
+            if(strcmp(e1->sval,"write")==0){
+                Operand t=new_temp();
+                translate_Exp(e3->first_child,t);
+                gen_ir_1(IR_WRITE,t);
+            }else{
+                if(e3->first_child){
+                    translate_Args(e3);
+                }
+                gen_ir_2(IR_CALL,place, new_func(e1->sval));
+            }
         }
     }
     // Exp → INT | FLOAT
@@ -194,18 +220,85 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     } else if(astcmp(e1,"FLOAT")){
 
     }
-// Exp → Exp ASSIGNOP Exp
+    // Exp → Exp ASSIGNOP Exp
     else if (e2&&astcmp(e2, "ASSIGNOP")){
-//        translate_Exp(e1);
-//        translate_Exp(e3);
+        place= new_var(e1->first_child->sval);
+        Operand tmp=new_temp();
+        translate_Exp(e3,tmp);
+        gen_ir_2(IR_ASSIGN,place,tmp);
     }
     // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
     else if (e2&&e3&&astcmp(e3,"Exp")) {
-//        translate_Exp(e1);
-//        translate_Exp(e3);
+        if(astcmp(e2,"AND")||astcmp(e2,"OR")||astcmp(e2,"RELOP")){
+            Operand l1=new_label(),l2=new_label();
+            gen_ir_2(IR_ASSIGN,place,new_const("0"));
+            translate_Cond(cur,l1,l2);
+            gen_ir_1(IR_LABEL,l1);
+            gen_ir_2(IR_ASSIGN,place,new_const("1"));
+            gen_ir_1(IR_LABEL,l2);
+        }else{
+            Operand t1=new_temp(),t2=new_temp();
+            translate_Exp(e1,t1);
+            translate_Exp(e3,t2);
+            IR_TYPE arith_type;
+            if (astcmp(e2, "PLUS"))
+                arith_type = IR_ADD;
+            else if (astcmp(e2, "MINUS"))
+                arith_type = IR_SUB;
+            else if (astcmp(e2, "STAR"))
+                arith_type = IR_MUL;
+            else if (astcmp(e2, "DIV"))
+                arith_type = IR_DIV;
+            gen_ir_3(arith_type,place,t1,t2);
+        }
     }
     // Exp → MINUS Exp | NOT Exp
     else if(e2&&astcmp(e2, "Exp")) {
 //        translate_Exp(e2);
     }
+}
+
+void translate_Cond(syntaxNode *cur, Operand label_true, Operand label_false) {
+    syntaxNode* e1=cur->first_child,
+            * e2=e1 ? e1->next_sibling:NULL,
+            * e3=e2 ? e2->next_sibling:NULL;
+    if(e1&& astcmp(e1,"NOT")){
+        translate_Cond(e1,label_false,label_true);
+    }else if(e2&& astcmp(e2,"RELOP")){
+        Operand t1=new_temp(),t2=new_temp();
+        translate_Exp(e1,t1);
+        translate_Exp(e3,t2);
+        gen_ir_if(e2->sval,t1,t2,label_true);
+        gen_ir_1(IR_GOTO,label_false);
+    }
+    else if(e2&& astcmp(e2,"AND")){
+        Operand l1=new_label();
+        translate_Cond(e1,l1,label_false);
+        gen_ir_1(IR_LABEL,l1);
+        translate_Cond(e3,label_true,label_false);
+    }
+    else if(e2&& astcmp(e2,"OR")){
+        Operand l1=new_label();
+        translate_Cond(e1,label_true,l1);
+        gen_ir_1(IR_LABEL,l1);
+        translate_Cond(e3,label_true,label_false);
+    }
+    else{
+        Operand t1=new_temp();
+        translate_Exp(cur,t1);
+        gen_ir_if("!=",t1,new_const("0"),label_true);
+        gen_ir_1(IR_GOTO,label_false);
+    }
+}
+
+void translate_Args(syntaxNode *cur) {
+    //    Args → Exp COMMA Args | Exp
+    syntaxNode* exp=cur->first_child;
+    Operand t1=new_temp();
+    translate_Exp(exp,t1);
+    // arg_list
+    if(exp->next_sibling){
+        translate_Args(exp->next_sibling->next_sibling);
+    }
+    gen_ir_1(IR_ARG,t1);
 }
