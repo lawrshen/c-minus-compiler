@@ -179,7 +179,7 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             * e3=e2 ? e2->next_sibling:NULL;
     // Exp → LP Exp RP
     if(astcmp(e1,"LP")){
-//        translate_Exp(e2);
+       translate_Exp(e2,place);
     }
     // Exp → Exp LB Exp RB
     else if(e2&&astcmp(e2,"LB")) {
@@ -227,9 +227,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
         translate_Exp(e3,tmp);
         gen_ir_2(IR_ASSIGN,place,tmp);
     }
-    // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
-    else if (e2&&e3&&astcmp(e3,"Exp")) {
-        if(astcmp(e2,"AND")||astcmp(e2,"OR")||astcmp(e2,"RELOP")){
+    // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | NOT Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
+    else if (e2&&e3&&(astcmp(e3,"Exp")|| astcmp(e1,"NOT"))) {
+        if(astcmp(e2,"AND")||astcmp(e2,"OR")||astcmp(e2,"RELOP")||astcmp(e1,"NOT")){
             Operand l1=new_label(),l2=new_label();
             gen_ir_2(IR_ASSIGN,place,new_const("0"));
             translate_Cond(cur,l1,l2);
@@ -252,9 +252,11 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             gen_ir_3(arith_type,place,t1,t2);
         }
     }
-    // Exp → MINUS Exp | NOT Exp
-    else if(e2&&astcmp(e2, "Exp")) {
-//        translate_Exp(e2);
+    // Exp → MINUS Exp
+    else if(e1&&astcmp(e1, "MINUS")) {
+        Operand t=new_temp();
+        translate_Exp(e2,t);
+        gen_ir_3(IR_SUB,place, new_const("0"),t);
     }
 }
 
