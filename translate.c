@@ -17,6 +17,36 @@ int calculate_ArraySize(Type_ptr t) {
     }
 }
 
+int array_size_cache[256],array_size_len_cache=0;
+bool CACHE_SIZE_AVAILABLE=false;
+int calculate_SubArraySize(syntaxNode* cur,int array_depth){
+    if(array_depth==0){
+        return 1;
+    }
+    if(CACHE_SIZE_AVAILABLE){
+        return array_size_cache[array_size_len_cache-array_depth];
+    }else{
+        while(astcmp(cur,"Exp")){
+            cur=cur->first_child;
+        }
+        Symbol_ptr s=hash_find_nocompst(cur->sval);
+        int array_size[256];//256d-array...suppose it enough
+        int i=0;
+        Type_ptr t=s->type;
+        while(t->kind==ARRAY){
+            array_size[i]=t->u.array.size;
+            i++;
+            t=t->u.array.elem;
+        }
+        array_size_len_cache=i;
+        for(int j=0;j<array_size_len_cache;j++){
+            array_size_cache[j]=array_size[j];
+        }
+        CACHE_SIZE_AVAILABLE=true;
+        return array_size[i-array_depth];
+    }
+}
+
 /*** High-Level Definitions ***/
 
 void translate_Program(syntaxNode* cur) {
@@ -196,6 +226,7 @@ void translate_Dec(syntaxNode* cur){
 
 /*** Expression ***/
 Operand offset_last=NULL,offset_now=NULL;
+int ARRAY_DEPTH=0;
 
 void translate_Exp(syntaxNode* cur, Operand place) {
     syntaxNode* e1=cur->first_child,
@@ -210,8 +241,7 @@ void translate_Exp(syntaxNode* cur, Operand place) {
         Operand t=new_temp();
         translate_Exp(e3,t);
         Operand offset=new_temp();
-        gen_ir_3(IR_MUL,offset,t,new_int(4));
-        // gen_ir_3(IR_MUL,offset,t,new_int(sizeof*4));
+        gen_ir_3(IR_MUL,offset,t,new_int(calculate_SubArraySize(cur,ARRAY_DEPTH)*4));
         offset_now=new_temp();
         if(offset_last){
             gen_ir_3(IR_ADD,offset_now,offset,offset_last);
@@ -224,9 +254,13 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             }else{
                 gen_ir_3(IR_ADD,place,addr,offset);
             }
+            // init array settings
             offset_last=offset_now=NULL;
+            CACHE_SIZE_AVAILABLE=false;
+            ARRAY_DEPTH=0;
         }else{
             offset_last=offset;
+            ARRAY_DEPTH++;
             translate_Exp(e1,place);
         }
 //        translate_Exp(e1);
