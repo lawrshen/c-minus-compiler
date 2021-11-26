@@ -55,6 +55,7 @@ Symbol_ptr new_symbol(int region);
 void hash_create();
 bool hash_insert(Symbol_ptr node);
 Symbol_ptr hash_find(char* name);
+Symbol_ptr hash_find_nocompst(char* name);
 // Compst
 void compst_destroy(int depth);
 

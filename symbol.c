@@ -138,3 +138,17 @@ Symbol_ptr hash_find(char* name) {
     }
     return opt;
 }
+
+Symbol_ptr hash_find_nocompst(char* name) {
+    unsigned int idx = hash_pjw(name);
+    Symbol_ptr cur = hash_table[idx], opt = NULL;
+    while (cur) {
+        if (strcmp(name, cur->name) == 0) {
+            if (!opt || opt->region < cur->region){
+                opt = cur;
+            }
+        }
+        cur = cur->nxt;
+    }
+    return opt;
+}

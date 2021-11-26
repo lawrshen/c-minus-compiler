@@ -40,6 +40,10 @@ size_t output_operandf(char *s, Operand op){
             return sprintf(s, "%s", op->u.relop);
         case OP_FUNC:
             return sprintf(s, "%s", op->u.func_name);
+        case OP_SIZE:
+            return sprintf(s, "%d", op->u.value);
+        case OP_ADDR:
+            return sprintf(s, "&%s", op->u.addr_name);
         default:
             return sprintf(s, "(NULL)");
     }
@@ -97,7 +101,7 @@ void output_intercode(InterCode ic,FILE* fp){
             s += sprintf(s, "RETURN ");
             s += output_operandf(s,ic->u.ret.var);
             break;
-          case IR_GOTO: 
+        case IR_GOTO:
             s += sprintf(s, "GOTO ");
             s += output_operandf(s, ic->u.jump.dest);
             break;
@@ -131,6 +135,23 @@ void output_intercode(InterCode ic,FILE* fp){
             s += output_operandf(s,ic->u.call.left);
             s += sprintf(s, " := CALL ");
             s += output_operandf(s,ic->u.call.right);
+            break;
+        case IR_DEC:
+            s += sprintf(s, "DEC ");
+            s += output_operandf(s,ic->u.dec.left);
+            s += sprintf(s, " ");
+            s += output_operandf(s,ic->u.dec.right);
+            break;
+        case IR_LOAD:
+            s += output_operandf(s, ic->u.load.left);
+            s += sprintf(s, " := *");
+            s += output_operandf(s, ic->u.load.right);
+            break;
+        case IR_SAVE: 
+            s += sprintf(s, "*");
+            s += output_operandf(s, ic->u.save.left);
+            s += sprintf(s, " := ");
+            s += output_operandf(s, ic->u.save.right);
             break;
         default:
             s += sprintf(s, "TODO! ");
@@ -182,6 +203,12 @@ void gen_ir_2(IR_TYPE type, Operand op1, Operand op2) {
             ic->u.assign.left=op1,ic->u.assign.right=op2;break;
         case IR_CALL:
             ic->u.call.left=op1,ic->u.call.right=op2;break;
+        case IR_DEC:
+            ic->u.dec.left=op1,ic->u.dec.right=op2;break;
+        case IR_LOAD:
+            ic->u.load.left=op1,ic->u.load.right=op2;break;
+        case IR_SAVE:
+            ic->u.save.left=op1,ic->u.save.right=op2;break;
         default:break;
     }
     insertInterCode(ic);
@@ -261,5 +288,19 @@ Operand new_relop(char* relop){
     Operand tmp = (Operand)malloc(sizeof(struct Operand_));
     tmp->kind = OP_RELOP;
     strcpy(tmp->u.relop, relop);
+    return tmp;
+}
+
+Operand new_size(int val) {
+    Operand tmp = (Operand)malloc(sizeof(struct Operand_));
+    tmp->kind = OP_SIZE;
+    tmp->u.value = val;
+    return tmp;
+}
+
+Operand new_addr(char *val) {
+    Operand tmp = (Operand)malloc(sizeof(struct Operand_));
+    tmp->kind = OP_ADDR;
+    strcpy(tmp->u.addr_name, val);
     return tmp;
 }

@@ -9,6 +9,14 @@
 
 #include "translate.h"
 
+int calculate_ArraySize(Type_ptr t) {
+    if(t->kind==ARRAY){
+        return t->u.array.size* calculate_ArraySize(t->u.array.elem);
+    }else{
+        return 4;
+    }
+}
+
 /*** High-Level Definitions ***/
 
 void translate_Program(syntaxNode* cur) {
@@ -66,6 +74,15 @@ void translate_FunDec(syntaxNode* cur) {
 
 void translate_VarDec(syntaxNode *cur) {
     //    VarDec → ID | VarDec LB INT RB
+    if(astcmp(cur->first_child,"VarDec")){
+        // since only int[]...
+        if(astcmp(cur->first_child->first_child,"ID")){
+            Symbol_ptr s = hash_find_nocompst(cur->first_child->first_child->sval);
+            gen_ir_2(IR_DEC, new_var(cur->first_child->first_child->sval), new_size(calculate_ArraySize(s->type)));
+        }else{
+            translate_VarDec(cur->first_child);
+        }
+    }
 }
 /*** Statments ***/
 
@@ -167,11 +184,18 @@ void translate_Dec(syntaxNode* cur){
     if(assignop){
         Operand tmp = new_temp();
         translate_Exp(assignop->next_sibling,tmp);
-        gen_ir_2(IR_ASSIGN, new_var(cur->first_child->first_child->sval), tmp);
+        if(tmp->is_addr){
+            Operand t=new_temp();
+            gen_ir_2(IR_LOAD,t,tmp);
+            gen_ir_2(IR_ASSIGN, new_var(cur->first_child->first_child->sval), t);
+        }else{
+            gen_ir_2(IR_ASSIGN, new_var(cur->first_child->first_child->sval), tmp);
+        }
     }
 }
 
 /*** Expression ***/
+Operand offset_last=NULL,offset_now=NULL;
 
 void translate_Exp(syntaxNode* cur, Operand place) {
     syntaxNode* e1=cur->first_child,
@@ -183,6 +207,28 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     }
     // Exp → Exp LB Exp RB
     else if(e2&&astcmp(e2,"LB")) {
+        Operand t=new_temp();
+        translate_Exp(e3,t);
+        Operand offset=new_temp();
+        gen_ir_3(IR_MUL,offset,t,new_int(4));
+        // gen_ir_3(IR_MUL,offset,t,new_int(sizeof*4));
+        offset_now=new_temp();
+        if(offset_last){
+            gen_ir_3(IR_ADD,offset_now,offset,offset_last);
+        }
+        if(astcmp(e1->first_child,"ID")){
+            Operand addr= new_addr(e1->first_child->sval);
+            place->is_addr=true;
+            if(offset_last){
+                gen_ir_3(IR_ADD,place,addr,offset_now);
+            }else{
+                gen_ir_3(IR_ADD,place,addr,offset);
+            }
+            offset_last=offset_now=NULL;
+        }else{
+            offset_last=offset;
+            translate_Exp(e1,place);
+        }
 //        translate_Exp(e1);
     }
     // Exp → Exp DOT ID
@@ -204,7 +250,13 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             if(strcmp(e1->sval,"write")==0){
                 Operand t=new_temp();
                 translate_Exp(e3->first_child,t);
-                gen_ir_1(IR_WRITE,t);
+                if(t->is_addr){
+                    Operand t2=new_temp();
+                    gen_ir_2(IR_LOAD,t2,t);
+                    gen_ir_1(IR_WRITE,t2);
+                }else{
+                    gen_ir_1(IR_WRITE,t);
+                }
             }else{
                 if(e3->first_child){
                     translate_Args(e3);
@@ -222,10 +274,28 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     }
     // Exp → Exp ASSIGNOP Exp
     else if (e2&&astcmp(e2, "ASSIGNOP")){
-        place= new_var(e1->first_child->sval);
         Operand tmp=new_temp();
         translate_Exp(e3,tmp);
-        gen_ir_2(IR_ASSIGN,place,tmp);
+        if(astcmp(e1->first_child,"ID")){
+            place= new_var(e1->first_child->sval);
+            if(tmp->is_addr){//...=array[]
+                Operand t2=new_temp();
+                gen_ir_2(IR_LOAD,t2,tmp);
+                gen_ir_2(IR_ASSIGN,place,t2);
+            }else{
+                gen_ir_2(IR_ASSIGN,place,tmp);
+            }
+        }else{// array[]=...
+            place=new_temp();
+            translate_Exp(e1,place);
+            if(tmp->is_addr){// array[]=array[]
+                Operand t2=new_temp();
+                gen_ir_2(IR_LOAD,t2,tmp);
+                gen_ir_2(IR_SAVE,place,t2);
+            }else{
+                gen_ir_2(IR_SAVE,place,tmp);
+            }
+        }
     }
     // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | NOT Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
     else if (e2&&e3&&(astcmp(e3,"Exp")|| astcmp(e1,"NOT"))) {
@@ -249,14 +319,35 @@ void translate_Exp(syntaxNode* cur, Operand place) {
                 arith_type = IR_MUL;
             else if (astcmp(e2, "DIV"))
                 arith_type = IR_DIV;
-            gen_ir_3(arith_type,place,t1,t2);
+            Operand ta1=new_temp(),ta2=new_temp();
+            if(t1->is_addr){
+                gen_ir_2(IR_LOAD,ta1,t1);
+            }
+            if(t2->is_addr){
+                gen_ir_2(IR_LOAD,ta2,t2);
+            }
+            if(t1->is_addr&&t2->is_addr){
+                gen_ir_3(arith_type,place,ta1,ta2);
+            }else if(t1->is_addr){
+                gen_ir_3(arith_type,place,ta1,t2);
+            }else if(t2->is_addr){
+                gen_ir_3(arith_type,place,t1,ta2);
+            }else{
+                gen_ir_3(arith_type,place,t1,t2);
+            }
         }
     }
     // Exp → MINUS Exp
     else if(e1&&astcmp(e1, "MINUS")) {
         Operand t=new_temp();
         translate_Exp(e2,t);
-        gen_ir_3(IR_SUB,place, new_const("0"),t);
+        if(t->is_addr){
+            Operand tmp=new_temp();
+            gen_ir_2(IR_LOAD,tmp,t);
+            gen_ir_3(IR_SUB,place, new_const("0"),tmp);
+        }else{
+            gen_ir_3(IR_SUB,place, new_const("0"),t);
+        }
     }
 }
 
@@ -270,7 +361,22 @@ void translate_Cond(syntaxNode *cur, Operand label_true, Operand label_false) {
         Operand t1=new_temp(),t2=new_temp();
         translate_Exp(e1,t1);
         translate_Exp(e3,t2);
-        gen_ir_if(e2->sval,t1,t2,label_true);
+        Operand ta1=new_temp(),ta2=new_temp();
+        if(t1->is_addr){
+            gen_ir_2(IR_LOAD,ta1,t1);
+        }
+        if(t2->is_addr){
+            gen_ir_2(IR_LOAD,ta2,t2);
+        }
+        if(t1->is_addr&&t2->is_addr){
+            gen_ir_if(e2->sval,ta1,ta2,label_true);
+        }else if(t1->is_addr){
+            gen_ir_if(e2->sval,ta1,t2,label_true);
+        }else if(t2->is_addr){
+            gen_ir_if(e2->sval,t1,ta2,label_true);
+        }else{
+            gen_ir_if(e2->sval,t1,t2,label_true);
+        }
         gen_ir_1(IR_GOTO,label_false);
     }
     else if(e2&& astcmp(e2,"AND")){
@@ -288,7 +394,13 @@ void translate_Cond(syntaxNode *cur, Operand label_true, Operand label_false) {
     else{
         Operand t1=new_temp();
         translate_Exp(cur,t1);
-        gen_ir_if("!=",t1,new_const("0"),label_true);
+        if(t1->is_addr){
+            Operand t2=new_temp();
+            gen_ir_2(IR_LOAD,t2,t1);
+            gen_ir_if("!=",t2,new_const("0"),label_true);
+        }else{
+            gen_ir_if("!=",t1,new_const("0"),label_true);
+        }
         gen_ir_1(IR_GOTO,label_false);
     }
 }
@@ -302,5 +414,11 @@ void translate_Args(syntaxNode *cur) {
     if(exp->next_sibling){
         translate_Args(exp->next_sibling->next_sibling);
     }
-    gen_ir_1(IR_ARG,t1);
+    if(t1->is_addr){
+        Operand t2=new_temp();
+        gen_ir_2(IR_LOAD,t2,t1);
+        gen_ir_1(IR_ARG,t2);
+    }else{
+        gen_ir_1(IR_ARG,t1);
+    }
 }
