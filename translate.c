@@ -9,12 +9,53 @@
 
 #include "translate.h"
 
+int calculate_StructSize(Type_ptr t);
 int calculate_ArraySize(Type_ptr t) {
     if(t->kind==ARRAY){
         return t->u.array.size* calculate_ArraySize(t->u.array.elem);
+    }else if(t->kind==STRUCTURE){
+        return calculate_StructSize(t);
     }else{
         return 4;
     }
+}
+int calculate_StructOffset(Type_ptr s, char* id) {
+    if(s->kind==STRUCTURE){
+        int size = 0;
+        for (Symbol_ptr p = s->u.structure; p; p = p->cross_nxt) {
+            if (strcmp(p->name, id) == 0) break;
+            switch (p->type->kind) {
+                case BASIC:
+                    size += 4;
+                    break;
+                case ARRAY:
+                    size += calculate_ArraySize(p->type);
+                    break;
+                case STRUCTURE:
+                    size += calculate_StructSize(p->type);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return size;
+    }else{
+        printf("\033[36m[Debug INFO]:None Offset,mismatch for structure Type!!\n\033[0m");
+        return 0;
+    }
+}
+int calculate_StructSize(Type_ptr t){
+    return calculate_StructOffset(t,"");
+}
+Symbol_ptr find_struct_info(syntaxNode* cur){
+    while(astcmp(cur,"ID")==false){
+        if(astcmp(cur,"Exp")){
+            cur=cur->first_child;
+        }else{
+            cur=cur->first_child->next_sibling;
+        }
+    }
+    return hash_find_nocompst(cur->sval);
 }
 
 int array_size_cache[256],array_size_len_cache=0;
@@ -95,6 +136,10 @@ void translate_FunDec(syntaxNode* cur) {
             char* var_name;
             if(astcmp(paramdec->first_child->next_sibling->first_child,"ID")){
                 var_name=paramdec->first_child->next_sibling->first_child->sval;
+                Symbol_ptr s=hash_find_nocompst(var_name);
+                if(s&&s->type->kind==STRUCTURE){
+                    s->is_array_param=true;
+                }
             }else{
                 var_name=paramdec->first_child->next_sibling->first_child->first_child->sval;
                 Symbol_ptr s=hash_find_nocompst(var_name);
@@ -121,6 +166,11 @@ void translate_VarDec(syntaxNode *cur) {
             gen_ir_2(IR_DEC, new_var(cur->first_child->first_child->sval), new_size(calculate_ArraySize(s->type)));
         }else{
             translate_VarDec(cur->first_child);
+        }
+    }else{
+        Symbol_ptr s = hash_find_nocompst(cur->first_child->sval);
+        if(s&&s->type->kind==STRUCTURE){
+            gen_ir_2(IR_DEC, new_var(cur->first_child->sval), new_size(calculate_StructSize(s->type)));
         }
     }
 }
@@ -277,11 +327,26 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             ARRAY_DEPTH++;
             translate_Exp(e1,place);
         }
-//        translate_Exp(e1);
     }
     // Exp → Exp DOT ID
     else if(e2&&astcmp(e2,"DOT")){
-//        translate_Exp(e1);
+        // Get Address
+        Operand t1 = new_temp();
+        translate_Exp(e1, t1);
+        // Get Offset
+        char* id_name = e3->sval;
+        Symbol_ptr s=find_struct_info(cur);
+        if(s==NULL){//for safe
+            printf("\033[36m[Debug INFO]:mismatch for structure dot!!\n\033[0m");
+            return ;
+        }
+        Type_ptr t=s->type;
+        while(t->kind==ARRAY){
+            t=t->u.array.elem;
+        }
+        int size = calculate_StructOffset(t, id_name);
+        place->is_addr=true;
+        gen_ir_3(IR_ADD, place, t1, new_int(size));
     }
     // Exp → ID LP Args RP | ID LP RP | ID
     else if (astcmp(e1, "ID")){
@@ -484,6 +549,15 @@ void translate_Args(syntaxNode *cur) {
             int offset=calculate_SubArraySize(next_id,depth);
             gen_ir_3(IR_MUL,temp2,temp1,new_int(offset*4));
             gen_ir_3(IR_ADD,t1,new_addr(next_id->sval),temp2);
+        }
+    }else if(s&&s->type->kind==STRUCTURE){
+        if(astcmp(last_exp,"ID")){
+            Symbol_ptr s=hash_find_nocompst(last_exp->sval);
+            if(s->is_array_param){
+                t1=new_var(last_exp->sval);
+            }else{
+                t1=new_addr(last_exp->sval);
+            }
         }
     }else{
         translate_Exp(exp,t1);
