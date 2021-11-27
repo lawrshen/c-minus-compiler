@@ -60,12 +60,14 @@ Symbol_ptr find_struct_info(syntaxNode* cur){
 
 int array_size_cache[256],array_size_len_cache=0;
 bool CACHE_SIZE_AVAILABLE=false;
+int array_base_size=4;
 int calculate_SubArraySize(syntaxNode* cur,int array_depth){
-    if(array_depth==0){
-        return 1;
-    }
     if(CACHE_SIZE_AVAILABLE){
-        return array_size_cache[array_size_len_cache-array_depth];
+        if(array_depth==0){
+            return array_base_size;
+        }else{
+            return array_size_cache[array_size_len_cache-array_depth]*array_base_size;
+        }
     }else{
         while(astcmp(cur,"Exp")){
             cur=cur->first_child;
@@ -79,14 +81,22 @@ int calculate_SubArraySize(syntaxNode* cur,int array_depth){
             i++;
             t=t->u.array.elem;
         }
+        array_base_size=t->kind==STRUCTURE? calculate_StructSize(t):4;
+        // store cache
         array_size_len_cache=i;
         for(int j=0;j<array_size_len_cache;j++){
             array_size_cache[j]=array_size[j];
         }
         CACHE_SIZE_AVAILABLE=true;
-        return array_size[i-array_depth];
+        if(array_depth==0){
+            return array_base_size;
+        }else{
+            return array_size[i-array_depth]*array_base_size;
+        }
     }
 }
+
+bool SPECIFIAL_STRUCT_ARRAY =false;
 
 /*** High-Level Definitions ***/
 
@@ -301,7 +311,7 @@ void translate_Exp(syntaxNode* cur, Operand place) {
         Operand t=new_temp();
         translate_Exp(e3,t);
         Operand offset=new_temp();
-        gen_ir_3(IR_MUL,offset,t,new_int(calculate_SubArraySize(cur,ARRAY_DEPTH)*4));
+        gen_ir_3(IR_MUL,offset,t,new_int(calculate_SubArraySize(cur,ARRAY_DEPTH)));
         offset_now=new_temp();
         if(offset_last){
             gen_ir_3(IR_ADD,offset_now,offset,offset_last);
@@ -321,7 +331,7 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             // init array settings
             offset_last=offset_now=NULL;
             CACHE_SIZE_AVAILABLE=false;
-            ARRAY_DEPTH=0;
+            ARRAY_DEPTH=0,array_base_size=4;
         }else{
             offset_last=offset;
             ARRAY_DEPTH++;
@@ -534,30 +544,44 @@ void translate_Args(syntaxNode *cur) {
         depth++;
     }
     Symbol_ptr s=hash_find_nocompst(next_id->sval);
-    if(s&&s->type->kind==ARRAY){
-        if(astcmp(last_exp,"ID")){
-            Symbol_ptr s=hash_find_nocompst(last_exp->sval);
-            if(s->is_array_param){
-                t1=new_var(last_exp->sval);
-            }else{
-                t1=new_addr(last_exp->sval);
-            }
-        }else{
-            syntaxNode* subexp=last_exp->next_sibling->next_sibling;
-            Operand temp1=new_temp(),temp2=new_temp();
-            translate_Exp(subexp,temp1);
-            int offset=calculate_SubArraySize(next_id,depth);
-            gen_ir_3(IR_MUL,temp2,temp1,new_int(offset*4));
-            gen_ir_3(IR_ADD,t1,new_addr(next_id->sval),temp2);
+    if(s){
+        Type_ptr t_elem=s->type;
+        for(int idx=depth;idx>0&&t_elem;idx--){
+            t_elem=t_elem->u.array.elem;
         }
-    }else if(s&&s->type->kind==STRUCTURE){
-        if(astcmp(last_exp,"ID")){
-            Symbol_ptr s=hash_find_nocompst(last_exp->sval);
-            if(s->is_array_param){
-                t1=new_var(last_exp->sval);
+        if(t_elem->kind==ARRAY){
+            if(astcmp(last_exp,"ID")){
+                Symbol_ptr s=hash_find_nocompst(last_exp->sval);
+                if(s->is_array_param){
+                    t1=new_var(last_exp->sval);
+                }else{
+                    t1=new_addr(last_exp->sval);
+                }
             }else{
-                t1=new_addr(last_exp->sval);
+                syntaxNode* subexp=last_exp->next_sibling->next_sibling;
+                Operand temp1=new_temp(),temp2=new_temp();
+                translate_Exp(subexp,temp1);
+                int offset=calculate_SubArraySize(next_id,depth);
+                gen_ir_3(IR_MUL,temp2,temp1,new_int(offset));
+                gen_ir_3(IR_ADD,t1,new_addr(next_id->sval),temp2);
             }
+        }else if(s->type->kind==STRUCTURE){
+            if(astcmp(last_exp,"ID")){
+                Symbol_ptr s=hash_find_nocompst(last_exp->sval);
+                if(s->is_array_param){
+                    t1=new_var(last_exp->sval);
+                }else{
+                    t1=new_addr(last_exp->sval);
+                }
+            }else{
+                printf("\033[36m[Debug INFO]:Undefined performence about struct!!\n\033[0m");
+                return ;
+            }
+        }else if(s->type->kind==ARRAY&&t_elem->kind==STRUCTURE){
+            SPECIFIAL_STRUCT_ARRAY=true;// like a mutex lock
+            translate_Exp(exp,t1);
+        }else{
+            translate_Exp(exp,t1);
         }
     }else{
         translate_Exp(exp,t1);
@@ -566,11 +590,12 @@ void translate_Args(syntaxNode *cur) {
     if(exp->next_sibling){
         translate_Args(exp->next_sibling->next_sibling);
     }
-    if(t1->is_addr){
+    if(t1->is_addr&&SPECIFIAL_STRUCT_ARRAY==false){
         Operand t2=new_temp();
         gen_ir_2(IR_LOAD,t2,t1);
         gen_ir_1(IR_ARG,t2);
     }else{
         gen_ir_1(IR_ARG,t1);
+        SPECIFIAL_STRUCT_ARRAY=false;
     }
 }
