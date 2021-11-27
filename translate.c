@@ -30,7 +30,7 @@ int calculate_SubArraySize(syntaxNode* cur,int array_depth){
             cur=cur->first_child;
         }
         Symbol_ptr s=hash_find_nocompst(cur->sval);
-        int array_size[256];//256d-array...suppose it enough
+        int array_size[256];//256d-array...suppose it enough,anyway not good hard-coding
         int i=0;
         Type_ptr t=s->type;
         while(t->kind==ARRAY){
@@ -92,7 +92,17 @@ void translate_FunDec(syntaxNode* cur) {
     if (astcmp(varlist, "VarList")) {
         while(1){
             syntaxNode* paramdec=varlist->first_child;
-            gen_ir_1(IR_PARAM,new_var(paramdec->first_child->next_sibling->first_child->sval));
+            char* var_name;
+            if(astcmp(paramdec->first_child->next_sibling->first_child,"ID")){
+                var_name=paramdec->first_child->next_sibling->first_child->sval;
+            }else{
+                var_name=paramdec->first_child->next_sibling->first_child->first_child->sval;
+                Symbol_ptr s=hash_find_nocompst(var_name);
+                if(s){//for safe ,although always found
+                    s->is_array_param=true;
+                }
+            }
+            gen_ir_1(IR_PARAM,new_var(var_name));
             if(paramdec->next_sibling){
                 varlist=paramdec->next_sibling->next_sibling;
             }else{
@@ -248,6 +258,10 @@ void translate_Exp(syntaxNode* cur, Operand place) {
         }
         if(astcmp(e1->first_child,"ID")){
             Operand addr= new_addr(e1->first_child->sval);
+            Symbol_ptr s=hash_find_nocompst(e1->first_child->sval);
+            if(s->is_array_param){
+                addr=new_var(e1->first_child->sval);
+            }
             place->is_addr=true;
             if(offset_last){
                 gen_ir_3(IR_ADD,place,addr,offset_now);
@@ -294,6 +308,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             }else{
                 if(e3->first_child){
                     translate_Args(e3);
+                }
+                if(place==NULL){
+                    place=new_temp();
                 }
                 gen_ir_2(IR_CALL,place, new_func(e1->sval));
             }
@@ -443,7 +460,34 @@ void translate_Args(syntaxNode *cur) {
     //    Args → Exp COMMA Args | Exp
     syntaxNode* exp=cur->first_child;
     Operand t1=new_temp();
-    translate_Exp(exp,t1);
+    // for array[] arg
+    syntaxNode* next_id=exp->first_child,*last_exp=next_id;
+    int depth=0;
+    while(astcmp(next_id,"Exp")){
+        last_exp=next_id;
+        next_id=next_id->first_child;
+        depth++;
+    }
+    Symbol_ptr s=hash_find_nocompst(next_id->sval);
+    if(s&&s->type->kind==ARRAY){
+        if(astcmp(last_exp,"ID")){
+            Symbol_ptr s=hash_find_nocompst(last_exp->sval);
+            if(s->is_array_param){
+                t1=new_var(last_exp->sval);
+            }else{
+                t1=new_addr(last_exp->sval);
+            }
+        }else{
+            syntaxNode* subexp=last_exp->next_sibling->next_sibling;
+            Operand temp1=new_temp(),temp2=new_temp();
+            translate_Exp(subexp,temp1);
+            int offset=calculate_SubArraySize(next_id,depth);
+            gen_ir_3(IR_MUL,temp2,temp1,new_int(offset*4));
+            gen_ir_3(IR_ADD,t1,new_addr(next_id->sval),temp2);
+        }
+    }else{
+        translate_Exp(exp,t1);
+    }
     // arg_list
     if(exp->next_sibling){
         translate_Args(exp->next_sibling->next_sibling);

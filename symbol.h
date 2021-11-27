@@ -47,7 +47,7 @@ typedef struct _Symbol {
 	// compst_nxt: the next symbol in same block
     Symbol_ptr nxt, cross_nxt, compst_nxt;
     int region;
-    bool is_activate,is_global;
+    bool is_activate,is_global,is_array_param;
 } Symbol;
 
 Symbol_ptr new_symbol(int region);
