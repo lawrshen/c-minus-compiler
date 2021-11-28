@@ -16,6 +16,7 @@ InterCodes ir_head = NULL,ir_tail = NULL;
 void insertInterCode(InterCode ic){
     InterCodes ir_tmp = (InterCodes)malloc(sizeof(struct InterCodes_));
     ir_tmp->code=ic;
+    ir_tmp->dead=false;
     if(ir_head){
         ir_tmp->prev=ir_tail;
         ir_tmp->next=NULL;
@@ -163,7 +164,9 @@ void output_intercode(InterCode ic,FILE* fp){
 void outputInterCodes(FILE *fp) {
     InterCodes p = ir_head;
     while (p) {
-        output_intercode(p->code,fp);
+        if(p->dead==false){
+            output_intercode(p->code,fp);
+        }
         p = p->next;
     }
 }

@@ -73,16 +73,16 @@ struct InterCode_ {
     union {
         struct { Operand label;} label;
         struct { Operand function;} function;
-        struct { Operand right, left; } assign, addr, load, save,call,dec;
-        struct { Operand result, op1, op2; } binop, addr_offset;
+        struct { Operand right, left; } assign, addr, load, save, call, dec;
+        struct { Operand result, op1, op2; } binop;
         struct { Operand dest;} jump;
         struct { Operand op1, relop, op2, dest;} jump_cond;
-        struct { Operand var;} ret, fence, read, write, arg, param;
+        struct { Operand var;} ret, read, write, arg, param;
     } u;
 };
 
 typedef struct InterCodes_* InterCodes;
-struct InterCodes_ { InterCode code; struct InterCodes_ *prev, *next; };
+struct InterCodes_ { InterCode code; struct InterCodes_ *prev, *next; bool dead;};
 
 void insertInterCode(InterCode ic);
 void outputInterCodes(FILE* fp);

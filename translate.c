@@ -362,7 +362,7 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     else if (astcmp(e1, "ID")){
         // System IO
         if(e2==NULL){
-            gen_ir_2(IR_ASSIGN,place, new_var(e1->sval));// #todo opt
+            gen_ir_2(IR_ASSIGN,place, new_var(e1->sval));
         }else if(astcmp(e3,"RP")){
             if(strcmp(e1->sval,"read")==0){
                 gen_ir_1(IR_READ,place);
@@ -546,7 +546,7 @@ void translate_Args(syntaxNode *cur) {
     Symbol_ptr s=hash_find_nocompst(next_id->sval);
     if(s){
         Type_ptr t_elem=s->type;
-        for(int idx=depth;idx>0&&t_elem;idx--){
+        for(int idx=depth;idx>0&&t_elem->kind!=BASIC;idx--){
             t_elem=t_elem->u.array.elem;
         }
         if(t_elem->kind==ARRAY){

@@ -3,6 +3,7 @@
 #include "semantics.h"
 #include "ir.h"
 #include "translate.h"
+#include "opt.h"
 
 extern FILE *yyin;
 extern int yylex();
@@ -55,6 +56,7 @@ int main(int argc, char **argv)
         declare_check();
     // Lab 3: generate IR
         translate_Program(stroot);
+        LinearOptIC();
         if(argc==3){
             FILE *ir = fopen(argv[2], "w");
             outputInterCodes(ir);
