@@ -322,6 +322,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             if(s->is_array_param){
                 addr=new_var(e1->first_child->sval);
             }
+            if(place==NULL){
+                place=new_temp();
+            }
             place->is_addr=true;
             if(offset_last){
                 gen_ir_3(IR_ADD,place,addr,offset_now);
@@ -361,6 +364,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     // Exp → ID LP Args RP | ID LP RP | ID
     else if (astcmp(e1, "ID")){
         // System IO
+        if(place==NULL){
+            place=new_temp();
+        }
         if(e2==NULL){
             gen_ir_2(IR_ASSIGN,place, new_var(e1->sval));
         }else if(astcmp(e3,"RP")){
@@ -394,6 +400,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     // Exp → INT | FLOAT
     else if(astcmp(e1,"INT")){
         Operand op2 = new_int(e1->ival);
+        if(place==NULL){
+            place=new_temp();
+        }
         gen_ir_2(IR_ASSIGN,place,op2);
     } else if(astcmp(e1,"FLOAT")){
 
@@ -427,6 +436,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     else if (e2&&e3&&(astcmp(e3,"Exp")|| astcmp(e1,"NOT"))) {
         if(astcmp(e2,"AND")||astcmp(e2,"OR")||astcmp(e2,"RELOP")||astcmp(e1,"NOT")){
             Operand l1=new_label(),l2=new_label();
+            if(place==NULL){
+                place=new_temp();
+            }
             gen_ir_2(IR_ASSIGN,place,new_const("0"));
             translate_Cond(cur,l1,l2);
             gen_ir_1(IR_LABEL,l1);
@@ -446,6 +458,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
             else if (astcmp(e2, "DIV"))
                 arith_type = IR_DIV;
             Operand ta1=new_temp(),ta2=new_temp();
+            if(place==NULL){
+                place=new_temp();
+            }
             if(t1->is_addr){
                 gen_ir_2(IR_LOAD,ta1,t1);
             }
@@ -465,6 +480,9 @@ void translate_Exp(syntaxNode* cur, Operand place) {
     }
     // Exp → MINUS Exp
     else if(e1&&astcmp(e1, "MINUS")) {
+        if(place==NULL){
+            place = new_temp();
+        }
         Operand t=new_temp();
         translate_Exp(e2,t);
         if(t->is_addr){
@@ -482,7 +500,7 @@ void translate_Cond(syntaxNode *cur, Operand label_true, Operand label_false) {
             * e2=e1 ? e1->next_sibling:NULL,
             * e3=e2 ? e2->next_sibling:NULL;
     if(e1&& astcmp(e1,"NOT")){
-        translate_Cond(e1,label_false,label_true);
+        translate_Cond(e2,label_false,label_true);
     }else if(e2&& astcmp(e2,"RELOP")){
         Operand t1=new_temp(),t2=new_temp();
         translate_Exp(e1,t1);

@@ -10,11 +10,12 @@
 #include "opt.h"
 #include "ir.h"
 #include<string.h>
-extern InterCodes ir_head,ir_tail;
-bool tmpactualconst[512];
-int tmp2const[512];
-bool tmpactualvar[512];
-char tmp2var[512][64];
+#include<stdlib.h>
+extern InterCodes ir_head;
+extern int temp_num;
+bool* tmpactualconst,*tmpactualvar;
+int* tmp2const;
+char tmp2var[100000][64];
 
 #define TEMP_VAR_TO_CONST(OP_TYPE)                                                    \
     do{                                                                               \
@@ -167,11 +168,11 @@ bool simple_temp_val(InterCode ic){
 
 // linear scanning IR to optimize actual const/variable temp
 void LinearOptIC() {
-    memset(tmpactualconst,0,sizeof(tmpactualconst));
-    memset(tmp2const,0,sizeof(tmp2const));
-    memset(tmpactualvar,0,sizeof(tmpactualvar));
+    tmpactualconst=(bool*)calloc(temp_num,sizeof(bool)),
+    tmpactualvar=(bool*)calloc(temp_num,sizeof(bool));
+    tmp2const=(int*)calloc(temp_num,sizeof(int)),
     memset(tmp2var,0,sizeof(tmp2var));
-    for(InterCodes p=ir_head;p!=ir_tail;p=p->next){
+    for(InterCodes p=ir_head;p;p=p->next){
         InterCode ic=p->code;
         if(simple_eval(ic)|| simple_temp_val(ic)){
             p->dead=true;
