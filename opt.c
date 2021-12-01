@@ -108,6 +108,15 @@ bool simple_eval(InterCode ic){
             TEMP_VAR_TO_CONST(write);
         case IR_ARG:
             TEMP_VAR_TO_CONST(arg);
+        case IR_SAVE:{
+                if(ic->u.save.right->kind==OP_TEMP){
+                    if(tmpactualconst[ic->u.save.right->u.temp_no]){
+                        ic->u.save.right->kind=OP_CONST;
+                        ic->u.save.right->u.value=tmp2const[ic->u.save.right->u.temp_no];
+                    }
+                }
+                return false;
+            }
         default:
             return false;
     }
@@ -161,6 +170,15 @@ bool simple_temp_val(InterCode ic){
             TEMP_VAR_TO_VAR(write);
         case IR_ARG:
             TEMP_VAR_TO_VAR(arg);
+        case IR_SAVE:{
+                if(ic->u.save.right->kind==OP_TEMP){
+                    if(tmpactualvar[ic->u.save.right->u.temp_no]){
+                        ic->u.save.right->kind=OP_VAR;
+                        strcpy(ic->u.save.right->u.var_name,tmp2var[ic->u.save.right->u.temp_no]);
+                    }
+                }
+                return false;
+            }
         default:
             return false;
     }
@@ -173,9 +191,11 @@ void LinearOptIC() {
     tmp2const=(int*)calloc(temp_num,sizeof(int)),
     memset(tmp2var,0,sizeof(tmp2var));
     for(InterCodes p=ir_head;p;p=p->next){
-        InterCode ic=p->code;
-        if(simple_eval(ic)|| simple_temp_val(ic)){
-            p->dead=true;
+        if(p->prev&&p->prev->code->kind!=IR_LABEL){
+            InterCode ic=p->code;
+            if(simple_eval(ic)|| simple_temp_val(ic)){
+                p->dead=true;
+            }    
         }
     }
 }

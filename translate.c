@@ -412,7 +412,12 @@ void translate_Exp(syntaxNode* cur, Operand place) {
         Operand tmp=new_temp();
         translate_Exp(e3,tmp);
         if(astcmp(e1->first_child,"ID")){
-            place= new_var(e1->first_child->sval);
+            if(place==NULL){
+                place=new_var(e1->first_child->sval);
+            }else{
+                place->kind=OP_VAR;
+                strcpy(place->u.var_name, e1->first_child->sval);
+            }
             if(tmp->is_addr){//...=array[]
                 Operand t2=new_temp();
                 gen_ir_2(IR_LOAD,t2,tmp);
@@ -433,7 +438,7 @@ void translate_Exp(syntaxNode* cur, Operand place) {
         }
     }
     // Exp → Exp AND Exp | Exp OR Exp | Exp RELOP Exp | NOT Exp | Exp PLUS Exp | Exp MINUS Exp | Exp STAR Exp | Exp DIV Exp
-    else if (e2&&e3&&(astcmp(e3,"Exp")|| astcmp(e1,"NOT"))) {
+    else if ((e2&&e3&&astcmp(e3,"Exp"))|| (e2&&astcmp(e1,"NOT"))) {
         if(astcmp(e2,"AND")||astcmp(e2,"OR")||astcmp(e2,"RELOP")||astcmp(e1,"NOT")){
             Operand l1=new_label(),l2=new_label();
             if(place==NULL){

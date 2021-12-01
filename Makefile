@@ -6,7 +6,7 @@ TEST_ARGS = A
 .PHONY: all debug lexical syntax clean test 
 
 all: lexical syntax
-	@$(CC) $(SRC_C) -lfl -ly -o parser
+	@$(CC) $(SRC_C) -D OPT_LAB3 -lfl -ly -o parser
 
 debug: lexical syntax
 	@$(CC) -g $(SRC_C) -lfl -ly -o parser
