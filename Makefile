@@ -1,11 +1,15 @@
 CC = gcc
-SRC_C = main.c syntax.tab.c tree.c semantics.c symbol.c
+LAB2_SRC_C = main.c syntax.tab.c tree.c semantics.c symbol.c
+SRC_C = main.c syntax.tab.c tree.c semantics.c symbol.c ir.c translate.c opt.c
 TEST_ARGS = A
 
 .PHONY: all debug lexical syntax clean test 
 
 all: lexical syntax
-	@$(CC) $(SRC_C) -lfl -ly -o parser
+	@$(CC) $(SRC_C) -D OPT_LAB3 -lfl -ly -o parser
+
+debug: lexical syntax
+	@$(CC) -g $(SRC_C) -lfl -ly -o parser
 
 color: lexical syntax
 	@$(CC) $(SRC_C) -D COLORFUL -lfl -ly -o parser

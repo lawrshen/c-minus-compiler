@@ -49,6 +49,7 @@ void setStrVal(){
         case FLOAT:                                                  \
             node->fval = yylval.fval;                                \
             break;                                                   \
+        case RELOP:                                                  \
         case ID:                                                     \
         case TYPE:                                                   \
             strcpy(node->sval, yylval.sval);                         \
@@ -115,7 +116,7 @@ COMMENTB "/*"
 ";"      {TOKENTREE(SEMI);return SEMI;}
 ","      {TOKENTREE(COMMA);return COMMA;}
 "="      {TOKENTREE(ASSIGNOP);return ASSIGNOP;}
-{RELOP}  {TOKENTREE(RELOP);return RELOP;}
+{RELOP}  {setStrVal();TOKENTREE(RELOP);return RELOP;}
 "+"      {TOKENTREE(PLUS); return PLUS;}
 "-"      {TOKENTREE(MINUS);return MINUS; }
 "*"      {TOKENTREE(STAR); return STAR;}

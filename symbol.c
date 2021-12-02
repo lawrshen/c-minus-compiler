@@ -1,7 +1,6 @@
 #include "symbol.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 Symbol_ptr hash_table[SYMBOL_SIZE];
 Symbol_ptr compst[COMPST_SIZE];
@@ -131,6 +130,20 @@ Symbol_ptr hash_find(char* name) {
     Symbol_ptr cur = hash_table[idx], opt = NULL;
     while (cur) {
         if (cur->is_activate&&strcmp(name, cur->name) == 0) {
+            if (!opt || opt->region < cur->region){
+                opt = cur;
+            }
+        }
+        cur = cur->nxt;
+    }
+    return opt;
+}
+
+Symbol_ptr hash_find_nocompst(char* name) {
+    unsigned int idx = hash_pjw(name);
+    Symbol_ptr cur = hash_table[idx], opt = NULL;
+    while (cur) {
+        if (strcmp(name, cur->name) == 0) {
             if (!opt || opt->region < cur->region){
                 opt = cur;
             }

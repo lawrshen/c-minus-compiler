@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "tree.h"
 #include "semantics.h"
+#include "ir.h"
+#include "translate.h"
+#include "opt.h"
 
 extern FILE *yyin;
 extern int yylex();
@@ -51,6 +54,17 @@ int main(int argc, char **argv)
     // Lab 2: conduct a full semantic scan.
         ParseProgram(stroot);
         declare_check();
+    // Lab 3: generate IR
+        translate_Program(stroot);
+#if OPT_LAB3
+        LinearOptIC();
+#endif
+        if(argc==3){
+            FILE *ir = fopen(argv[2], "w");
+            outputInterCodes(ir);
+        }else{
+            outputInterCodes(stdout);
+        }
     }
 
     return 0;
