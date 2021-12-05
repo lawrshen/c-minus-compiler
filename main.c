@@ -4,6 +4,7 @@
 #include "ir.h"
 #include "translate.h"
 #include "opt.h"
+#include "asm.h"
 
 extern FILE *yyin;
 extern int yylex();
@@ -59,12 +60,24 @@ int main(int argc, char **argv)
 #if OPT_LAB3
         LinearOptIC();
 #endif
+#if LAB3_ENABLE
         if(argc==3){
             FILE *ir = fopen(argv[2], "w");
             outputInterCodes(ir);
+            fclose(ir);
         }else{
             outputInterCodes(stdout);
         }
+#else
+// Lab4: generate target code
+        if(argc==3){
+            FILE *ir = fopen(argv[2], "w");
+            outputMips(ir);
+            fclose(ir);
+        }else{
+            outputMips(stdout);
+        }
+#endif
     }
 
     return 0;

@@ -13,3 +13,4 @@ Test*
 utils/
 *.ir
 irsim/
+*.s

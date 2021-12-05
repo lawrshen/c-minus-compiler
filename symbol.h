@@ -53,6 +53,7 @@ typedef struct _Symbol {
 Symbol_ptr new_symbol(int region);
 // Hash
 void hash_create();
+unsigned int hash_pjw(char* name);
 bool hash_insert(Symbol_ptr node);
 Symbol_ptr hash_find(char* name);
 Symbol_ptr hash_find_nocompst(char* name);

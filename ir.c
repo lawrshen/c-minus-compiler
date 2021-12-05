@@ -259,10 +259,12 @@ Operand new_temp() {
     return tmp;
 }
 
+int var_num = 1;
 Operand new_var(char* sval){
     Operand tmp = (Operand)malloc(sizeof(struct Operand_));
     tmp->kind = OP_VAR;
     strcpy(tmp->u.var_name, sval);
+    var_num++;
     return tmp;
 }
 
