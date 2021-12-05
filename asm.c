@@ -26,6 +26,8 @@ int get_framesize(){
 
 static int array_size_dec[0x3fff];
 
+int arg_cur=0,arg_cnt=0,param_cnt=0;
+
 #define zero_ registers[0]
 #define at_   registers[1]
 #define v0_   registers[2]
@@ -89,6 +91,17 @@ void move_reg_(const char *to_reg, const char *from_reg,FILE *fp) {
     fprintf(fp, "    move    %s,%s\n", to_reg, from_reg);
 }
 
+void iter_args(InterCodes ir,FILE* fp){
+    while(ir->code->kind == IR_ARG){
+        arg_cnt++;
+        ir=ir->next;
+    }
+    arg_cur = arg_cnt - 1;
+    if(arg_cnt >= 4){
+        fprintf(fp, "    subu       $sp,$sp,%d\n", 4 * (arg_cnt - 4));
+    }
+}
+
 void output_ic_mips(InterCode ic, FILE* fp){
     switch (ic->kind) {
         case IR_LABEL:{
@@ -121,18 +134,47 @@ void output_ic_mips(InterCode ic, FILE* fp){
             break;
         }
         case IR_ARG:{  // Caller: prepare args
-
+            Operand op1=ic->u.arg.var;
+            if (op1->kind == OP_CONST) {
+                if (arg_cur < 4)
+                    fprintf(fp, "    li      $a%d,%d\n", arg_cur, op1->u.value);
+                else {
+                    pop_reg_op1();
+                    fprintf(fp, "    sw      $t0,%d($sp)\n", 4 * (arg_cur - 4));
+                }
+            } else {
+                pop_reg_op1();
+                if (arg_cur < 4)
+                    fprintf(fp, "    move    $a%d,$t0\n", arg_cur);
+                else {
+                    fprintf(fp, "    sw      $t0,%d($sp)\n", 4 * (arg_cur - 4));
+                }
+            }
+            arg_cur--;
+            break;
         }
         case IR_CALL:{
             Operand op1=ic->u.call.left,op2=ic->u.call.right;
-            fprintf(fp, "    jal      %s\n",op2->u.func_name);
+            fprintf(fp, "    jal     %s\n",op2->u.func_name);
             move_reg(t0_,v0_);
             push_reg_op1();
-            // todo more args
+            if (arg_cnt >= 4) {
+                fprintf(fp, "    addi     $sp,$sp,%d\n",4 * (arg_cnt - 4));  // restore $sp
+            }
+            arg_cnt = 0;
+            arg_cur = 0;
             break;
         }
         case IR_PARAM:{
-
+            Operand op1=ic->u.param.var;
+            if (param_cnt < 4) {
+                fprintf(fp, "    move    $t0,$%d\n", 4 + param_cnt);
+                push_reg_op1();
+            } else {
+                var_offset[hash_pjw(op1->u.var_name)] = 4 + (param_cnt - 3) * 4;
+            }
+            param_cnt++;
+            break;
         }
         case IR_FUNC:{
             fprintf(fp, "%s:\n", ic->u.function.function->u.func_name);
@@ -288,6 +330,9 @@ void outputMips(FILE *fp) {
     InterCodes p = ir_head;
     while (p) {
         if(p->dead==false){
+            if(arg_cnt==0&&p->code->kind==IR_ARG){
+                iter_args(p,fp);
+            }
             output_ic_mips(p->code,fp);
         }
         p = p->next;
