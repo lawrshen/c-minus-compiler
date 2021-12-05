@@ -24,6 +24,8 @@ int get_framesize(){
     return frame_size;
 }
 
+static int array_size_dec[0x3fff];
+
 #define zero_ registers[0]
 #define at_   registers[1]
 #define v0_   registers[2]
@@ -193,8 +195,21 @@ void output_ic_mips(InterCode ic, FILE* fp){
         }
         case IR_ADD:{
             Operand op1=ic->u.binop.result,op2=ic->u.binop.op1,op3=ic->u.binop.op2;
-            if(op2->is_addr||op3->is_addr){ // x := &y + ...
-
+            if(op2->kind == OP_ADDR){ // x := &y + ...
+                if(op3->kind == OP_CONST){
+                    fprintf(fp, "    la      $t0,%d($fp)\n",op3->u.value-array_size_dec[hash_pjw(op2->u.addr_name)]);
+                }else if(op3->kind == OP_TEMP || op3->kind == OP_VAR ){
+                    fprintf(fp, "    la      $t3,%d($fp)\n",var_offset[hash_pjw(op2->u.addr_name)]);
+                    if(op3->kind == OP_TEMP){
+                        fprintf(fp, "    lw      $t4,%d($fp)\n",tmp_offset[op3->u.temp_no]);
+                    }else if(op3->kind == OP_VAR){
+                        fprintf(fp, "    la      $t4,%d($fp)\n",var_offset[hash_pjw(op3->u.var_name)]);
+                    }
+                    fprintf(fp, "    add     $t5,$t4,$t3\n");
+                    fprintf(fp, "    move    $t0,$t5\n");
+                }else{
+                    fprintf(stderr,"undefined ADDR add!\n");
+                }
             }else{
                 if (op3->kind == OP_CONST) {
                     pop_reg_op2();
@@ -207,8 +222,8 @@ void output_ic_mips(InterCode ic, FILE* fp){
                     pop_reg_op3();
                     fprintf(fp, "    add     $t0,$t1,$t2\n");
                 }
-                push_reg_op1();
             }
+            push_reg_op1();
             break;
         }
         case IR_SUB:{
@@ -255,6 +270,7 @@ void output_ic_mips(InterCode ic, FILE* fp){
         }
         case IR_DEC:{
             Operand op1=ic->u.dec.left,op2=ic->u.dec.right;
+            array_size_dec[hash_pjw(op1->u.var_name)] = op2->u.value;
             fp_offset -= op2->u.value;
             var_offset[hash_pjw(op1->u.var_name)] = fp_offset;
             break;
