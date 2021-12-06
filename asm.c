@@ -15,7 +15,42 @@ extern InterCodes ir_head;
 int fp_offset=0;
 
 int* tmp_offset;
-int var_offset[0x3fff];
+
+typedef struct Var_Descriptor_* Var_Descriptor; 
+struct Var_Descriptor_
+{
+    int offset;
+    char var_name[64];
+    Var_Descriptor nxt;
+};
+
+Var_Descriptor var_offset[0x3fff];
+
+void var_insert(char* var_name,int v_offset){
+    int idx = hash_pjw(var_name);
+    if(var_offset[idx] == NULL){
+        var_offset[idx]=(Var_Descriptor)malloc(sizeof(struct Var_Descriptor_));
+        var_offset[idx]->offset=v_offset;
+        strcpy(var_offset[idx]->var_name,var_name);
+    }else{
+        Var_Descriptor p = var_offset[idx];
+        for(;p->nxt;p=p->nxt){}
+        Var_Descriptor tmp = (Var_Descriptor)malloc(sizeof(struct Var_Descriptor_));
+        tmp->offset=v_offset;
+        strcpy(tmp->var_name,var_name);
+        p->nxt=tmp;
+    }
+}
+
+int get_var_offset(char* var_name){
+    int idx = hash_pjw(var_name);
+    for(Var_Descriptor p=var_offset[idx];p;p=p->nxt){
+        if(strcmp(var_name,p->var_name)==0){
+            return p->offset;
+        }
+    }
+    return 0;
+}
 
 extern int temp_num,var_num;
 int frame_size;
@@ -24,18 +59,9 @@ int get_framesize(){
     return frame_size;
 }
 
-static int array_size_dec[0x3fff];
-
 int arg_cur=0,arg_cnt=0,param_cnt=0;
 
-#define zero_ registers[0]
-#define at_   registers[1]
 #define v0_   registers[2]
-#define v1_   registers[3]
-#define a0_   registers[4]
-#define a1_   registers[5]
-#define a2_   registers[6]
-#define a3_   registers[7]
 #define t0_   registers[8]
 #define t1_   registers[9]
 #define t2_   registers[10]
@@ -53,7 +79,7 @@ void push_reg_(const char* reg, Operand op, FILE* fp) {
     if(op->kind==OP_TEMP){
         offset=tmp_offset[op->u.temp_no];
     }else if(op->kind==OP_VAR){
-        offset=var_offset[hash_pjw(op->u.var_name)];
+        offset=get_var_offset(op->u.var_name);
     }
     if (!offset) {
         fp_offset -= 4;
@@ -62,7 +88,7 @@ void push_reg_(const char* reg, Operand op, FILE* fp) {
     if(op->kind==OP_TEMP){
         tmp_offset[op->u.temp_no]=offset;
     }else if(op->kind==OP_VAR){
-        var_offset[hash_pjw(op->u.var_name)]=offset;
+        var_insert(op->u.var_name,offset);
     }
     sw(reg, offset);
 }
@@ -78,7 +104,7 @@ void pop_reg_(const char* reg, Operand op, FILE* fp) {
     } else if (op->kind == OP_TEMP){
         lw(reg, tmp_offset[op->u.temp_no]);
     }else if(op->kind == OP_VAR||op->kind == OP_ADDR){
-        lw(reg, var_offset[hash_pjw(op->u.var_name)]);
+        lw(reg, get_var_offset(op->u.var_name));
     }else{
         fprintf(stderr,"undefined pop!\n");
     }
@@ -171,7 +197,7 @@ void output_ic_mips(InterCode ic, FILE* fp){
                 fprintf(fp, "    move    $t0,$%d\n", 4 + param_cnt);
                 push_reg_op1();
             } else {
-                var_offset[hash_pjw(op1->u.var_name)] = 4 + (param_cnt - 3) * 4;
+                var_insert(op1->u.var_name,4 + (param_cnt - 3) * 4);
             }
             param_cnt++;
             break;
@@ -192,9 +218,9 @@ void output_ic_mips(InterCode ic, FILE* fp){
                 fprintf(fp, "    li      $v0,%d\n", op1->u.value);
             } else {
                 pop_reg_op1();
-                fprintf(fp, "   move     $v0,$t1\n");
+                fprintf(fp, "    move    $v0,$t0\n");
             }
-            fprintf(fp, "    addi    $sp,$sp,%d\n",frame_size);               // frame size
+            fprintf(fp, "    addi    $sp,$sp,%d\n",frame_size);
             fprintf(fp, "    lw      $fp,0($sp)\n");  // load old fp
             fprintf(fp, "    lw      $ra,4($sp)\n");  // load return address
             fprintf(fp, "    addi    $sp,$sp,8\n");
@@ -226,7 +252,7 @@ void output_ic_mips(InterCode ic, FILE* fp){
                 if (op2->kind == OP_TEMP) {
                     la(t0_, tmp_offset[op2->u.temp_no]);
                 } else if (op2->kind == OP_VAR ){
-                    lw(t0_, var_offset[hash_pjw(op2->u.var_name)]);
+                    lw(t0_, get_var_offset(op2->u.var_name));
                 }
             }else if(op2->kind==OP_TEMP||op2->kind==OP_VAR){// x := y
                 pop_reg_op2();
@@ -239,13 +265,13 @@ void output_ic_mips(InterCode ic, FILE* fp){
             Operand op1=ic->u.binop.result,op2=ic->u.binop.op1,op3=ic->u.binop.op2;
             if(op2->kind == OP_ADDR){ // x := &y + ...
                 if(op3->kind == OP_CONST){
-                    fprintf(fp, "    la      $t0,%d($fp)\n",op3->u.value-array_size_dec[hash_pjw(op2->u.addr_name)]);
+                    fprintf(fp, "    la      $t0,%d($fp)\n",op3->u.value - get_var_offset(op2->u.addr_name));
                 }else if(op3->kind == OP_TEMP || op3->kind == OP_VAR ){
-                    fprintf(fp, "    la      $t3,%d($fp)\n",var_offset[hash_pjw(op2->u.addr_name)]);
+                    fprintf(fp, "    la      $t3,%d($fp)\n",get_var_offset(op2->u.addr_name));
                     if(op3->kind == OP_TEMP){
                         fprintf(fp, "    lw      $t4,%d($fp)\n",tmp_offset[op3->u.temp_no]);
                     }else if(op3->kind == OP_VAR){
-                        fprintf(fp, "    la      $t4,%d($fp)\n",var_offset[hash_pjw(op3->u.var_name)]);
+                        fprintf(fp, "    la      $t4,%d($fp)\n",get_var_offset(op3->u.var_name));
                     }
                     fprintf(fp, "    add     $t5,$t4,$t3\n");
                     fprintf(fp, "    move    $t0,$t5\n");
@@ -272,7 +298,7 @@ void output_ic_mips(InterCode ic, FILE* fp){
             Operand op1=ic->u.binop.result,op2=ic->u.binop.op1,op3=ic->u.binop.op2;
             pop_reg_op2();
             if (op3->kind == OP_CONST) {
-                fprintf(fp, "    addi     $t0,$t1,%d\n", op3->u.value);
+                fprintf(fp, "    addi    $t0,$t1,%d\n", -op3->u.value);
             } else {
                 pop_reg_op3();
                 fprintf(fp, "    sub     $t0,$t1,$t2\n");
@@ -312,9 +338,9 @@ void output_ic_mips(InterCode ic, FILE* fp){
         }
         case IR_DEC:{
             Operand op1=ic->u.dec.left,op2=ic->u.dec.right;
-            array_size_dec[hash_pjw(op1->u.var_name)] = op2->u.value;
+            var_insert(op1->u.var_name,op2->u.value);
             fp_offset -= op2->u.value;
-            var_offset[hash_pjw(op1->u.var_name)] = fp_offset;
+            var_insert(op1->u.var_name, fp_offset);
             break;
         }
         default:
